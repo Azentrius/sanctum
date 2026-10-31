@@ -31,19 +31,18 @@
           <p>{{ account.username }}</p>
           @if (account.needsReauth) {
           <p class="needs-reauth">{{ 'SETTINGS.NEEDS_REAUTH' | translate }}</p>
+          <ion-button
+            class="sign-in-again"
+            fill="outline"
+            (click)="signInAgain(account)"
+            (keydown.enter)="signInAgain(account)"
+            (keydown.space)="signInAgain(account); $event.preventDefault()"
+          >
+            {{ 'SETTINGS.SIGN_IN_AGAIN' | translate }}
+          </ion-button>
           }
         </ion-label>
-        @if (account.needsReauth) {
-        <ion-button
-          slot="end"
-          fill="outline"
-          (click)="signInAgain(account)"
-          (keydown.enter)="signInAgain(account)"
-          (keydown.space)="signInAgain(account); $event.preventDefault()"
-        >
-          {{ 'SETTINGS.SIGN_IN_AGAIN' | translate }}
-        </ion-button>
-        } @else if (account.isActive) {
+        @if (!account.needsReauth && account.isActive) {
         <ion-icon slot="end" name="checkmark-circle" color="primary"></ion-icon>
         }
       </ion-item>

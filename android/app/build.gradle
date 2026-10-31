@@ -42,6 +42,17 @@ android {
     buildFeatures {
         buildConfig true
     }
+    compileOptions {
+        // synctools and ical4j use Java APIs that need desugaring below their target level
+        coreLibraryDesugaringEnabled true
+    }
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/*.md', 'LICENSE',
+                         'META-INF/LICENSE.txt', 'META-INF/NOTICE.txt', 'META-INF/INDEX.LIST',
+                         'META-INF/io.netty.versions.properties']
+        }
+    }
     signingConfigs {
         release {
             if (keystorePropertiesFile.exists()) {
@@ -78,6 +89,17 @@ dependencies {
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
     implementation "com.squareup.okhttp3:okhttp:4.12.0"
+
+    // Native calendar sync (docs/native-sync.md)
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
+    implementation project(':synctools')
+    implementation('com.github.bitfireAT:dav4jvm:5.0.0') {
+        // Android brings its own XmlPullParser
+        exclude group: 'org.ogce', module: 'xpp3'
+    }
+    implementation 'io.ktor:ktor-client-okhttp:3.6.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
+    implementation 'androidx.work:work-runtime-ktx:2.11.2'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

@@ -12,5 +12,10 @@ images and the Azentrius name and word mark. These are:
   ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png, ios/App/App/Assets.xcassets/Splash.imageset/*.png
   Copyright (c) 2026 Stefan Popp. All rights reserved.
 
+synctools (android/synctools/), from DAVx5 (https://github.com/bitfireAT/davx5-ose)
+  Copyright the DAVx5 contributors, see android/synctools/AUTHORS
+  GNU General Public License version 3, see android/synctools/LICENSE;
+  origin and local changes in android/synctools/README.md
+
 Third-party packages that the app is built from keep their own licenses; they are listed with
 their license texts in package-lock.json and the build files under android/.

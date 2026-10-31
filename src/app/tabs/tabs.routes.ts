@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Routes } from '@angular/router';
 
+import { ENABLED_MODULES, moduleGuard, startRoute } from '../core/modules/app-modules';
 import { TabsPage } from './tabs.page';
 
 export const tabsRoutes: Routes = [
@@ -10,6 +11,7 @@ export const tabsRoutes: Routes = [
     children: [
       {
         path: 'home',
+        canMatch: [moduleGuard('dashboard')],
         loadChildren: () =>
           import('../features/dashboard/dashboard.routes').then((m) => m.dashboardRoutes),
       },
@@ -30,10 +32,12 @@ export const tabsRoutes: Routes = [
       },
       {
         path: 'files',
+        canMatch: [moduleGuard('files')],
         loadChildren: () => import('../features/files/files.routes').then((m) => m.filesRoutes),
       },
       {
         path: 'talk',
+        canMatch: [moduleGuard('talk')],
         loadChildren: () => import('../features/talk/talk.routes').then((m) => m.talkRoutes),
       },
       {
@@ -65,7 +69,7 @@ export const tabsRoutes: Routes = [
       },
       {
         path: '',
-        redirectTo: 'home',
+        redirectTo: startRoute(ENABLED_MODULES).replace('/tabs/', ''),
         pathMatch: 'full',
       },
     ],

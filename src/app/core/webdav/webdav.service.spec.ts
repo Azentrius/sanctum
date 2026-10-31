@@ -34,7 +34,7 @@ const FILE: FileItem = {
 };
 
 let service: WebdavService;
-let logout: ReturnType<typeof vi.fn>;
+let markNeedsReauth: ReturnType<typeof vi.fn>;
 
 const mockClient = {
   account: { homeUrl: ROOT },
@@ -45,14 +45,14 @@ const mockClient = {
 };
 
 beforeEach(() => {
-  logout = vi.fn().mockResolvedValue(undefined);
+  markNeedsReauth = vi.fn().mockResolvedValue(undefined);
   vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
 
   TestBed.configureTestingModule({
     providers: [
       WebdavService,
       { provide: AccountService, useValue: { getAccount: vi.fn().mockResolvedValue(ACCOUNT) } },
-      { provide: AuthService, useValue: { getValidToken: vi.fn().mockResolvedValue('pw'), logout } },
+      { provide: AuthService, useValue: { getValidToken: vi.fn().mockResolvedValue('pw'), markNeedsReauth } },
       {
         provide: DavClientService,
         useValue: {
@@ -147,13 +147,13 @@ describe('WebdavService auth handling', () => {
     mockClient.propfind.mockRejectedValue(new Error('401 Unauthorized'));
 
     await expect(service.listDirectory(ACCOUNT.id, '/')).rejects.toThrow(/Sitzung abgelaufen/);
-    expect(logout).toHaveBeenCalledWith(ACCOUNT.id);
+    expect(markNeedsReauth).toHaveBeenCalledWith(ACCOUNT.id);
   });
 
   it('rethrows non-auth errors unchanged', async () => {
     mockClient.deleteObject.mockRejectedValue(new Error('500 Server Error'));
 
     await expect(service.deleteItem(ACCOUNT.id, FILE)).rejects.toThrow('500 Server Error');
-    expect(logout).not.toHaveBeenCalled();
+    expect(markNeedsReauth).not.toHaveBeenCalled();
   });
 });

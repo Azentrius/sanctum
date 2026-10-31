@@ -36,7 +36,7 @@ const ADDRESS_BOOK: AddressBook = {
 let service: CarddavService;
 let getAccount: ReturnType<typeof vi.fn>;
 let getValidToken: ReturnType<typeof vi.fn>;
-let logout: ReturnType<typeof vi.fn>;
+let markNeedsReauth: ReturnType<typeof vi.fn>;
 
 const mockClient = {
   fetchAddressBooks: vi.fn(),
@@ -49,14 +49,14 @@ const mockClient = {
 beforeEach(() => {
   getAccount = vi.fn().mockResolvedValue(ACCOUNT);
   getValidToken = vi.fn().mockResolvedValue('app-password');
-  logout = vi.fn().mockResolvedValue(undefined);
+  markNeedsReauth = vi.fn().mockResolvedValue(undefined);
   vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
 
   TestBed.configureTestingModule({
     providers: [
       CarddavService,
       { provide: AccountService, useValue: { getAccount } },
-      { provide: AuthService, useValue: { getValidToken, logout } },
+      { provide: AuthService, useValue: { getValidToken, markNeedsReauth } },
       {
         provide: DavClientService,
         useValue: {
@@ -375,21 +375,21 @@ describe('CarddavService auth handling', () => {
     mockClient.fetchAddressBooks.mockRejectedValue(new Error('401 Unauthorized'));
 
     await expect(service.fetchAddressBooks(ACCOUNT.id)).rejects.toThrow(/Sitzung abgelaufen/);
-    expect(logout).toHaveBeenCalledWith(ACCOUNT.id);
+    expect(markNeedsReauth).toHaveBeenCalledWith(ACCOUNT.id);
   });
 
   it('rethrows non-auth errors unchanged', async () => {
     mockClient.fetchAddressBooks.mockRejectedValue(new Error('timeout'));
 
     await expect(service.fetchAddressBooks(ACCOUNT.id)).rejects.toThrow('timeout');
-    expect(logout).not.toHaveBeenCalled();
+    expect(markNeedsReauth).not.toHaveBeenCalled();
   });
 
   it('does not treat non-Error rejections as auth failures', async () => {
     mockClient.fetchAddressBooks.mockRejectedValue('plain string failure');
 
     await expect(service.fetchAddressBooks(ACCOUNT.id)).rejects.toBe('plain string failure');
-    expect(logout).not.toHaveBeenCalled();
+    expect(markNeedsReauth).not.toHaveBeenCalled();
   });
 
   it('surfaces a rejected write without logging out', async () => {
@@ -410,7 +410,7 @@ describe('CarddavService auth handling', () => {
         addresses: [],
       }),
     ).rejects.toMatchObject({ name: 'DavWriteError', status: 403 });
-    expect(logout).not.toHaveBeenCalled();
+    expect(markNeedsReauth).not.toHaveBeenCalled();
   });
 
   it('logs out on a write rejected with HTTP 401', async () => {
@@ -431,7 +431,7 @@ describe('CarddavService auth handling', () => {
         addresses: [],
       }),
     ).rejects.toThrow(/Sitzung abgelaufen/);
-    expect(logout).toHaveBeenCalledWith(ACCOUNT.id);
+    expect(markNeedsReauth).toHaveBeenCalledWith(ACCOUNT.id);
   });
 
   it.each([
@@ -442,6 +442,6 @@ describe('CarddavService auth handling', () => {
     mockClient.fetchAddressBooks.mockRejectedValue(new Error(message));
 
     await expect(service.fetchAddressBooks(ACCOUNT.id)).rejects.toThrow(/Sitzung abgelaufen/);
-    expect(logout).toHaveBeenCalledWith(ACCOUNT.id);
+    expect(markNeedsReauth).toHaveBeenCalledWith(ACCOUNT.id);
   });
 });

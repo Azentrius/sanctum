@@ -1,5 +1,5 @@
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<app-page-header [title]="'CALENDAR.TITLE' | translate" backHref="/tabs/home">
+<app-page-header [title]="'CALENDAR.TITLE' | translate" [backHref]="backHref">
   <ion-toolbar>
     <ion-button headerActions (click)="goToday()" (keydown.enter)="goToday()" (keydown.space)="goToday(); $event.preventDefault()" [appAriaLabel]="'CALENDAR.TODAY' | translate" appAiHint="Jump the calendar view to today's date">
       {{ 'CALENDAR.TODAY' | translate }}

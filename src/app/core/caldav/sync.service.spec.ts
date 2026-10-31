@@ -15,6 +15,7 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AccountService } from '../accounts/account.service';
 import { AddressBookService } from '../carddav/addressbook.service';
 import { ContactService } from '../carddav/contact.service';
+import { ALL_MODULES, APP_MODULES, AppModules, ENABLED_MODULES } from '../modules/app-modules';
 import { NotificationService } from '../notifications/notification.service';
 import { LocalDbService } from '../storage/local-db.service';
 import { CalendarService } from './calendar.service';
@@ -44,7 +45,7 @@ let present: ReturnType<typeof vi.fn>;
 let reschedule: ReturnType<typeof vi.fn>;
 let activeAccounts$: BehaviorSubject<{ id: string }[]>;
 
-beforeEach(() => {
+function setUp(modules: AppModules): void {
   loadCalendarsForAccount = vi.fn().mockResolvedValue(undefined);
   loadEventsForAccount = vi.fn().mockResolvedValue(undefined);
   loadAddressBooksForAccount = vi.fn().mockResolvedValue(undefined);
@@ -104,9 +105,14 @@ beforeEach(() => {
         },
       },
       ToastController,
+      { provide: APP_MODULES, useValue: modules },
     ],
   });
   service = TestBed.inject(SyncService);
+}
+
+beforeEach(() => {
+  setUp(ALL_MODULES);
 });
 
 afterEach(() => {
@@ -304,6 +310,22 @@ describe('SyncService.syncAll', () => {
     reschedule.mockRejectedValue(new Error('notifications unavailable'));
 
     await expect(service.syncAll()).resolves.toBeUndefined();
+  });
+
+  it('syncs only calendars and plans no birthdays while tasks and contacts are hidden', async () => {
+    TestBed.resetTestingModule();
+    setUp(ENABLED_MODULES);
+    const contacts = TestBed.inject(ContactService) as unknown as {
+      allContacts: BehaviorSubject<unknown[]>;
+    };
+    contacts.allContacts.next([{ id: 'contact-1' }]);
+
+    await service.syncAll({ force: true });
+
+    expect(loadCalendarsForAccount).toHaveBeenCalledWith(ACCOUNT_ID);
+    expect(loadTasksForAccount).not.toHaveBeenCalled();
+    expect(loadContactsForAccount).not.toHaveBeenCalled();
+    expect(reschedule).toHaveBeenCalledWith([], []);
   });
 });
 

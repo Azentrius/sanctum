@@ -19,6 +19,7 @@ import { BehaviorSubject, firstValueFrom } from 'rxjs';
 import { AccountService } from '../accounts/account.service';
 import { BiometricService } from '../auth/biometric.service';
 import { ConnectivityService } from '../connectivity/connectivity.service';
+import { ALL_MODULES, APP_MODULES, AppModules, ENABLED_MODULES } from '../modules/app-modules';
 import { SyncService } from '../caldav/sync.service';
 import { TalkSyncService } from '../talk/talk-sync.service';
 import { BackgroundSyncService } from './background-sync.service';
@@ -32,7 +33,7 @@ let refreshDisplayNamesIfStale: ReturnType<typeof vi.fn>;
 let activeAccounts$: BehaviorSubject<{ id: string }[]>;
 let isLocked$: BehaviorSubject<boolean>;
 
-beforeEach(() => {
+function setUp(modules: AppModules): void {
   syncCalendar = vi.fn().mockResolvedValue(undefined);
   syncContacts = vi.fn().mockResolvedValue(undefined);
   syncTasks = vi.fn().mockResolvedValue(undefined);
@@ -70,9 +71,14 @@ beforeEach(() => {
         provide: ConnectivityService,
         useValue: { isOnline: vi.fn().mockReturnValue(true) },
       },
+      { provide: APP_MODULES, useValue: modules },
     ],
   });
   service = TestBed.inject(BackgroundSyncService);
+}
+
+beforeEach(() => {
+  setUp(ALL_MODULES);
 });
 
 afterEach(() => {
@@ -153,5 +159,19 @@ describe('BackgroundSyncService', () => {
 
     expect(syncCalendar).not.toHaveBeenCalled();
     expect(syncContacts).not.toHaveBeenCalled();
+  });
+
+  it('syncs only the calendar while the other modules are hidden', async () => {
+    service.destroy();
+    TestBed.resetTestingModule();
+    setUp(ENABLED_MODULES);
+
+    await service.runStaleSync();
+
+    expect(syncCalendar).toHaveBeenCalledTimes(1);
+    expect(syncTasks).not.toHaveBeenCalled();
+    expect(syncContacts).not.toHaveBeenCalled();
+    expect(syncConversations).not.toHaveBeenCalled();
+    expect(refreshDisplayNamesIfStale).toHaveBeenCalled();
   });
 });

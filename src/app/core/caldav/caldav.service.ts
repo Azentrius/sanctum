@@ -385,7 +385,7 @@ export class CaldavService {
       }
 
       this.davClientService.invalidateClient(accountId);
-      await this.authService.logout(accountId);
+      await this.authService.markNeedsReauth(accountId);
       throw new Error('Sitzung abgelaufen. Bitte erneut anmelden.');
     }
   }

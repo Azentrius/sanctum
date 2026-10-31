@@ -4,9 +4,11 @@ import { ToastController } from '@ionic/angular';
 import { addDays, addMonths, subMonths } from 'date-fns';
 import { BehaviorSubject, firstValueFrom, map, Observable, take } from 'rxjs';
 
+import { NextcloudAccount } from '../accounts/account.model';
 import { AccountService } from '../accounts/account.service';
 import { AddressBookService } from '../carddav/addressbook.service';
 import { ContactService } from '../carddav/contact.service';
+import { APP_MODULES } from '../modules/app-modules';
 import { NotificationService } from '../notifications/notification.service';
 import { LocalDbService } from '../storage/local-db.service';
 import { CalendarService } from './calendar.service';
@@ -43,6 +45,7 @@ export class SyncService {
   private readonly notificationService = inject(NotificationService);
   private readonly localDb = inject(LocalDbService);
   private readonly toastController = inject(ToastController);
+  private readonly modules = inject(APP_MODULES);
 
   private readonly syncStatuses$ = new BehaviorSubject<Map<string, SyncStatus>>(new Map());
   private calendarSyncInFlight: Promise<void> | null = null;
@@ -63,7 +66,8 @@ export class SyncService {
   }
 
   /**
-   * Full sync (calendars, events, contacts). Used by pull-to-refresh. Coalesces
+   * Full sync (calendars and events, plus tasks and contacts while those modules are shown).
+   * Used by pull-to-refresh. Coalesces
    * parallel callers and skips work when every account was synced recently
    * unless {@link SyncOptions.force} is set.
    */
@@ -140,9 +144,7 @@ export class SyncService {
   }
 
   private async runAllSync(options: SyncOptions): Promise<void> {
-    const accounts = await firstValueFrom(
-      this.accountService.activeAccounts.pipe(take(1))
-    );
+    const accounts = await this.syncableAccounts();
     const range = resolveEventRange(options);
     let syncedAny = false;
 
@@ -151,9 +153,11 @@ export class SyncService {
         const needsCalendar =
           options.force || (await this.isCalendarSyncStale(account.id));
         const needsContacts =
-          options.force || (await this.isContactsSyncStale(account.id));
+          this.modules.contacts &&
+          (options.force || (await this.isContactsSyncStale(account.id)));
         const needsTasks =
-          options.force || (await this.isTasksSyncStale(account.id));
+          this.modules.tasks &&
+          (options.force || (await this.isTasksSyncStale(account.id)));
 
         if (!needsCalendar && !needsContacts && !needsTasks) {
           return false;
@@ -188,9 +192,7 @@ export class SyncService {
   }
 
   private async runCalendarSync(options: SyncOptions): Promise<void> {
-    const accounts = await firstValueFrom(
-      this.accountService.activeAccounts.pipe(take(1))
-    );
+    const accounts = await this.syncableAccounts();
     const range = resolveEventRange(options);
     let syncedAny = false;
 
@@ -216,9 +218,7 @@ export class SyncService {
   }
 
   private async runTasksSync(options: SyncOptions): Promise<void> {
-    const accounts = await firstValueFrom(
-      this.accountService.activeAccounts.pipe(take(1)),
-    );
+    const accounts = await this.syncableAccounts();
 
     const results = await Promise.all(
       accounts.map(async (account) => {
@@ -281,9 +281,7 @@ export class SyncService {
   }
 
   private async runContactsSync(options: SyncOptions): Promise<void> {
-    const accounts = await firstValueFrom(
-      this.accountService.activeAccounts.pipe(take(1))
-    );
+    const accounts = await this.syncableAccounts();
     let syncedAny = false;
 
     const results = await Promise.all(
@@ -393,12 +391,31 @@ export class SyncService {
     try {
       const [events, contacts] = await Promise.all([
         firstValueFrom(this.eventService.allEvents.pipe(take(1))),
-        firstValueFrom(this.contactService.allContacts.pipe(take(1))),
+        this.modules.contacts
+          ? firstValueFrom(this.contactService.allContacts.pipe(take(1)))
+          : Promise.resolve([]),
       ]);
       await this.notificationService.reschedule(events, contacts);
     } catch {
       // Reminders are non-critical; swallow so sync still reports success.
     }
+  }
+
+  /**
+   * The active accounts that can be synced. An account whose app password the server rejected
+   * is left out until the user signs in again; its status says so.
+   */
+  private async syncableAccounts(): Promise<NextcloudAccount[]> {
+    const accounts = await firstValueFrom(this.accountService.activeAccounts.pipe(take(1)));
+    for (const account of accounts) {
+      if (account.needsReauth) {
+        this.updateStatus(account.id, {
+          isSyncing: false,
+          error: 'Anmeldung abgelaufen. Bitte erneut anmelden.',
+        });
+      }
+    }
+    return accounts.filter((account) => !account.needsReauth);
   }
 
   private updateStatus(accountId: string, patch: Partial<SyncStatus>): void {

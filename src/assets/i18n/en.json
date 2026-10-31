@@ -153,6 +153,8 @@
     "REMOVE_ACCOUNT_CONFIRM": "Remove this account?",
     "ACCOUNT_REMOVED": "Account removed",
     "SWIPE_TO_DELETE": "Swipe left to delete",
+    "NEEDS_REAUTH": "Sign-in expired. Sign in again to sync this account.",
+    "SIGN_IN_AGAIN": "Sign in again",
     "LANGUAGE_SYSTEM_HINT": "Automatically from device language",
     "LANGUAGE_MANUAL": "Choose language",
     "SECTION_THEME": "Appearance",

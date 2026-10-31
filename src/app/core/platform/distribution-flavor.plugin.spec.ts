@@ -48,9 +48,16 @@ describe('getAppDistributionFlavor', () => {
     await expect(getAppDistributionFlavor()).resolves.toBe('play');
   });
 
-  it('falls back to "play" for an unexpected flavor value', async () => {
+  // 'unknown' lets the push provider selection decide (push-provider.select.ts).
+  it('reports "unknown" for an unexpected flavor value', async () => {
     getFlavor.mockResolvedValue({ flavor: 'something-else' as 'play' | 'foss' });
 
-    await expect(getAppDistributionFlavor()).resolves.toBe('play');
+    await expect(getAppDistributionFlavor()).resolves.toBe('unknown');
+  });
+
+  it('reports "unknown" when the native plugin fails', async () => {
+    getFlavor.mockRejectedValue(new Error('plugin not implemented'));
+
+    await expect(getAppDistributionFlavor()).resolves.toBe('unknown');
   });
 });

@@ -222,6 +222,24 @@ describe('AccountService queries', () => {
   });
 });
 
+describe('AccountService.findAccount', () => {
+  beforeEach(() => seed([account('a', 0)]));
+
+  it('finds the account of the same server and user', () => {
+    const { serverUrl, username } = current()[0];
+    expect(service.findAccount(serverUrl, username)?.id).toBe('a');
+  });
+
+  it('ignores a trailing slash and case in the server and the user', () => {
+    const { serverUrl, username } = current()[0];
+    expect(service.findAccount(`${serverUrl.toUpperCase()}/`, username.toUpperCase())?.id).toBe('a');
+  });
+
+  it('returns null for another user on the same server', () => {
+    expect(service.findAccount(current()[0].serverUrl, 'someone-else')).toBeNull();
+  });
+});
+
 describe('AccountService.refreshDisplayName', () => {
   beforeEach(() => {
     seed([account('a', 0, { serverUrl: 'https://cloud.example.com/', displayName: 'alice' })]);

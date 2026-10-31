@@ -6,6 +6,7 @@ import { BehaviorSubject, firstValueFrom, take } from 'rxjs';
 import { AccountService } from '../accounts/account.service';
 import { BiometricService } from '../auth/biometric.service';
 import { ConnectivityService } from '../connectivity/connectivity.service';
+import { APP_MODULES } from '../modules/app-modules';
 import { SYNC_STALE_MS, SyncService, dashboardEventRange } from '../caldav/sync.service';
 import { TalkSyncService } from '../talk/talk-sync.service';
 
@@ -20,6 +21,7 @@ export class BackgroundSyncService {
   private readonly accountService = inject(AccountService);
   private readonly biometricService = inject(BiometricService);
   private readonly connectivity = inject(ConnectivityService);
+  private readonly modules = inject(APP_MODULES);
 
   private readonly isSyncing$ = new BehaviorSubject(false);
   private syncInFlight: Promise<void> | null = null;
@@ -50,7 +52,7 @@ export class BackgroundSyncService {
     }, SYNC_STALE_MS);
   }
 
-  /** Runs calendar + contacts sync when TTLs expired (coalesced). */
+  /** Runs the syncs of the shown modules whose TTLs expired (coalesced). */
   async runStaleSync(): Promise<void> {
     if (this.syncInFlight) {
       return this.syncInFlight;
@@ -96,15 +98,22 @@ export class BackgroundSyncService {
     const range = dashboardEventRange();
     this.isSyncing$.next(true);
     try {
-      await Promise.all([
+      const syncs: Promise<unknown>[] = [
         this.syncService.syncCalendar({
           eventFrom: range.from,
           eventTo: range.to,
         }),
-        this.syncService.syncTasks(),
-        this.syncService.syncContacts(),
-        this.talkSyncService.syncConversations(),
-      ]);
+      ];
+      if (this.modules.tasks) {
+        syncs.push(this.syncService.syncTasks());
+      }
+      if (this.modules.contacts) {
+        syncs.push(this.syncService.syncContacts());
+      }
+      if (this.modules.talk) {
+        syncs.push(this.talkSyncService.syncConversations());
+      }
+      await Promise.all(syncs);
       await this.accountService.refreshDisplayNamesIfStale();
     } finally {
       this.isSyncing$.next(false);

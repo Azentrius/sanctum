@@ -3,6 +3,7 @@ import { Component, Input, inject } from '@angular/core';
 import { IonicModule, MenuController } from '@ionic/angular';
 import { TranslatePipe } from '@ngx-translate/core';
 
+import { APP_MODULES } from '../../../core/modules/app-modules';
 import { QuickSwitcherFacade } from '../../../core/search/quick-switcher.facade';
 import { AriaLabelDirective } from '../../directives/aria-label.directive';
 
@@ -27,6 +28,7 @@ import { AriaLabelDirective } from '../../directives/aria-label.directive';
         <ion-title>{{ title }}</ion-title>
         <ion-buttons slot="end">
           <ng-content select="[headerActions]"></ng-content>
+          @if (searchShown) {
           <ion-button
             fill="clear"
             (click)="openSearch()"
@@ -35,6 +37,7 @@ import { AriaLabelDirective } from '../../directives/aria-label.directive';
           >
             <ion-icon slot="icon-only" name="search-outline"></ion-icon>
           </ion-button>
+          }
           <ion-button fill="clear" (click)="openSettings()" [appAriaLabel]="settingsLabel" appAiHint="Open the settings side menu">
             <ion-icon slot="icon-only" name="settings-outline"></ion-icon>
           </ion-button>
@@ -51,6 +54,9 @@ export class PageHeaderComponent {
 
   private readonly menu = inject(MenuController);
   private readonly quickSwitcher = inject(QuickSwitcherFacade);
+
+  /** The search button, only while the search module is shown. */
+  readonly searchShown = inject(APP_MODULES).search;
 
   openSettings(): void {
     void this.menu.open('settings-menu');

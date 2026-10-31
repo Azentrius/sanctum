@@ -8,6 +8,7 @@ import { firstValueFrom, take } from 'rxjs';
 import { isHardwareBackExitRoute, shouldNavigateToAppLock } from './app.helpers';
 import { BiometricService } from './core/auth/biometric.service';
 import { BackgroundSyncService } from './core/dav/background-sync.service';
+import { APP_MODULES } from './core/modules/app-modules';
 import { StorageUnavailableService } from './core/storage/storage-unavailable.service';
 import { CertPinMismatchService } from './core/security/cert-pin-mismatch.service';
 import { SecureStateRecoveryService } from './core/security/secure-state-recovery.service';
@@ -39,6 +40,7 @@ export class AppComponent implements OnInit {
   private readonly storageUnavailable = inject(StorageUnavailableService);
   private readonly certPinMismatch = inject(CertPinMismatchService);
   private readonly secureStateRecovery = inject(SecureStateRecoveryService);
+  private readonly modules = inject(APP_MODULES);
 
   ngOnInit(): void {
     void this.init();
@@ -64,14 +66,18 @@ export class AppComponent implements OnInit {
     }
 
     this.backgroundSync.init();
-    await this.talkPush.init();
 
-    await App.addListener('appUrlOpen', ({ url }) => {
-      const target = this.talkPush.parseDeepLink(url);
-      if (target?.accountId && target.token) {
-        this.talkPush.navigateToRoom(target.accountId, target.token);
-      }
-    });
+    // Push serves Talk only; while Talk is hidden the app neither registers for push nor
+    // opens Talk links.
+    if (this.modules.talk) {
+      await this.talkPush.init();
+      await App.addListener('appUrlOpen', ({ url }) => {
+        const target = this.talkPush.parseDeepLink(url);
+        if (target?.accountId && target.token) {
+          this.talkPush.navigateToRoom(target.accountId, target.token);
+        }
+      });
+    }
     await App.addListener('appStateChange', ({ isActive }) => {
       if (isActive) {
         void this.handleAppResume();

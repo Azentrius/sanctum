@@ -1,6 +1,9 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
+import { ENABLED_MODULES, startRoute } from './core/modules/app-modules';
+
 /** Navigation roots where a hardware back press should exit the app. */
 const HARDWARE_BACK_EXIT_ROUTES = new Set([
+  startRoute(ENABLED_MODULES),
   '/tabs/home',
   '/app-lock',
   '/login',

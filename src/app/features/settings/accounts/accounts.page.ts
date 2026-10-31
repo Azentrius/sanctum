@@ -8,7 +8,6 @@ import { Observable } from 'rxjs';
 
 import { NextcloudAccount } from '../../../core/accounts/account.model';
 import { AccountService } from '../../../core/accounts/account.service';
-import { AuthService } from '../../../core/auth/auth.service';
 
 @Component({
   selector: 'app-accounts',
@@ -19,7 +18,6 @@ import { AuthService } from '../../../core/auth/auth.service';
 })
 export class AccountsPage implements OnInit {
   private readonly accountService = inject(AccountService);
-  private readonly authService = inject(AuthService);
   private readonly alertCtrl = inject(AlertController);
   private readonly toastCtrl = inject(ToastController);
   private readonly translate = inject(TranslateService);
@@ -33,6 +31,13 @@ export class AccountsPage implements OnInit {
 
   async addAccount(): Promise<void> {
     await this.router.navigate(['/tabs/settings/add-account']);
+  }
+
+  /** Opens the sign-in for this account's server; it replaces the rejected app password. */
+  async signInAgain(account: NextcloudAccount): Promise<void> {
+    await this.router.navigate(['/tabs/settings/add-account'], {
+      state: { serverUrl: account.serverUrl, returnUrl: '/tabs/settings/accounts' },
+    });
   }
 
   async confirmRemove(account: NextcloudAccount): Promise<void> {
@@ -59,7 +64,6 @@ export class AccountsPage implements OnInit {
       await this.accountService.removeAccount(account.id);
       const remaining = await this.accountService.getAccountCount();
       if (remaining === 0) {
-        await this.authService.logout(account.id);
         await this.router.navigate(['/login'], { replaceUrl: true });
         return;
       }

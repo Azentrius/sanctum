@@ -13,6 +13,11 @@ import { AuthService } from '../../../core/auth/auth.service';
 import { safeReturnUrl } from '../../../core/auth/safe-return-url';
 import { normalizeServerUrl } from '../../../core/auth/server-url.util';
 
+function prefilledServerUrl(state: unknown): string {
+  const value = (state as { serverUrl?: unknown } | null | undefined)?.serverUrl;
+  return typeof value === 'string' ? value : '';
+}
+
 @Component({
   selector: 'app-login',
   templateUrl: './login.page.html',
@@ -27,7 +32,8 @@ export class LoginPage {
   private readonly toastCtrl = inject(ToastController);
   private readonly translate = inject(TranslateService);
 
-  serverUrl = '';
+  /** Prefilled when "Sign in again" on the accounts page opened this page for an account. */
+  serverUrl = prefilledServerUrl(this.router.currentNavigation()?.extras.state ?? history.state);
   isLoading = false;
 
   async login(): Promise<void> {

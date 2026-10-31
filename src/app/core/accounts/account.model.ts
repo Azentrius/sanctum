@@ -8,6 +8,11 @@ export interface NextcloudAccount {
   avatarUrl?: string;
   color: string;
   isActive: boolean;
+  /**
+   * Set when the server rejected the app password (HTTP 401). The account and its data stay;
+   * signing in again with the same server and user stores a new app password and clears it.
+   */
+  needsReauth?: boolean;
   sortOrder: number;
   addedAt: number;
 }

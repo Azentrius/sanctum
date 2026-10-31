@@ -5,6 +5,7 @@ import { isHardwareBackExitRoute, shouldNavigateToAppLock } from './app.helpers'
 
 describe('isHardwareBackExitRoute', () => {
   it('exits at navigation roots', () => {
+    expect(isHardwareBackExitRoute('/tabs/calendar')).toBe(true);
     expect(isHardwareBackExitRoute('/tabs/home')).toBe(true);
     expect(isHardwareBackExitRoute('/app-lock')).toBe(true);
     expect(isHardwareBackExitRoute('/login')).toBe(true);
@@ -14,7 +15,7 @@ describe('isHardwareBackExitRoute', () => {
   });
 
   it('defers (pops) on spokes and detail pages', () => {
-    expect(isHardwareBackExitRoute('/tabs/calendar')).toBe(false);
+    expect(isHardwareBackExitRoute('/tabs/calendar/event/new')).toBe(false);
     expect(isHardwareBackExitRoute('/tabs/files')).toBe(false);
     expect(isHardwareBackExitRoute('/tabs/talk')).toBe(false);
     expect(isHardwareBackExitRoute('/tasks')).toBe(false);

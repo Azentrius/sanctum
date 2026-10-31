@@ -1,6 +1,6 @@
 {
   "name": "sanctum",
-  "version": "0.7.1",
+  "version": "0.8.0",
   "description": "Nextcloud calendar app for Android with multiple accounts and device sync",
   "author": "Stefan Popp",
   "license": "GPL-3.0-or-later",

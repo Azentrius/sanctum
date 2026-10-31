@@ -23,6 +23,7 @@ this works well.
 ## 3. Calendar sync with Android
 
 A native sync for Android, in stages; each stage is checked on a real device before the next one.
+The architecture, the stages and their checks are in [docs/native-sync.md](docs/native-sync.md).
 
 - **Foundation:** Kotlin in the Android app; one Android account per Nextcloud account; app
   passwords and certificate pins available to the sync without the app being open.

@@ -6,4 +6,6 @@
     <string name="package_name">de.azentrius.sanctum</string>
     <string name="custom_url_scheme">de.azentrius.sanctum</string>
     <string name="default_notification_channel_id">sanctum_default</string>
+    <!-- Android account type of Sanctum accounts; the same as SyncAccounts.ACCOUNT_TYPE -->
+    <string name="account_type" translatable="false">de.azentrius.sanctum</string>
 </resources>

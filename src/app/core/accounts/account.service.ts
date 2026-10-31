@@ -18,6 +18,7 @@ import {
 } from '../http/dav-url-policy';
 import { getNativeFetch } from '../http/native-fetch.util';
 import { trimTrailingSlashes } from '../string/string.util';
+import { NativeSyncAccountsService } from '../native-sync/native-sync-accounts.service';
 import { LocalDbService } from '../storage/local-db.service';
 
 const ACCOUNTS_KEY = 'accounts';
@@ -126,6 +127,7 @@ export class AccountService {
 
     await Promise.all([
       this.localDb.clearAccountData(id),
+      this.injector.get(NativeSyncAccountsService).remove(id),
       this.tokenService.clearPassword(id),
       this.certPinService.removePin(id),
       this.persistAccounts(updated),

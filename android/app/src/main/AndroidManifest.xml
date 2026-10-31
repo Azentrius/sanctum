@@ -25,6 +25,18 @@
             </intent-filter>
         </activity>
 
+        <!-- Android accounts for Sanctum accounts (Settings > Accounts); the native sync runs on them -->
+        <service
+            android:name=".sync.AuthenticatorService"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.accounts.AccountAuthenticator" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accounts.AccountAuthenticator"
+                android:resource="@xml/account_authenticator" />
+        </service>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

@@ -30,6 +30,7 @@ import { CalendarService } from '../../core/caldav/calendar.service';
 import { EventService } from '../../core/caldav/event.service';
 import { SyncService, SyncStatus } from '../../core/caldav/sync.service';
 import { ConnectivityService } from '../../core/connectivity/connectivity.service';
+import { APP_MODULES } from '../../core/modules/app-modules';
 import { OfflineReadFacade } from '../../core/connectivity/offline-read.facade';
 import {
   getBufferedRangeEnd,
@@ -75,6 +76,9 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   private readonly offlineRead = inject(OfflineReadFacade);
 
   @ViewChild('fullCalendar') fullCalendarComponent!: FullCalendarComponent;
+
+  /** Back to the dashboard when it is shown; otherwise the calendar is the start screen. */
+  readonly backHref = inject(APP_MODULES).dashboard ? '/tabs/home' : undefined;
 
   offlineBannerVisible = false;
   offlineBannerMessage = '';

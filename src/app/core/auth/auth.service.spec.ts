@@ -22,6 +22,8 @@ vi.mock('@capacitor/device', () => ({
 }));
 
 import { AccountService } from '../accounts/account.service';
+import { DavClientService } from '../dav/dav-client.service';
+import { AppPasswordRevocationService } from './app-password-revocation.service';
 import { AuthService } from './auth.service';
 import { TokenService } from './token.service';
 import { CertPinService } from '../security/cert-pin.service';
@@ -37,6 +39,10 @@ const clearPassword = vi.fn();
 const removeAccount = vi.fn();
 const establishTofuPin = vi.fn();
 const navigate = vi.fn();
+const findAccount = vi.fn();
+const updateAccount = vi.fn();
+const revokeForAccount = vi.fn();
+const invalidateClient = vi.fn();
 let accountCount$: BehaviorSubject<number>;
 let accounts$: BehaviorSubject<{ id: string }[]>;
 
@@ -56,6 +62,15 @@ beforeEach(() => {
   getPassword.mockResolvedValue('app-password');
   clearPassword.mockResolvedValue(undefined);
   removeAccount.mockResolvedValue(undefined);
+  findAccount.mockReset();
+  findAccount.mockReturnValue(null);
+  updateAccount.mockReset();
+  updateAccount.mockResolvedValue(undefined);
+  revokeForAccount.mockReset();
+  revokeForAccount.mockResolvedValue(undefined);
+  invalidateClient.mockReset();
+  addAccount.mockClear();
+  setPassword.mockClear();
   navigate.mockReset();
   navigate.mockResolvedValue(true);
   clearPassword.mockClear();
@@ -76,8 +91,12 @@ beforeEach(() => {
           accounts: accounts$.asObservable(),
           addAccount,
           removeAccount,
+          findAccount,
+          updateAccount,
         },
       },
+      { provide: AppPasswordRevocationService, useValue: { revokeForAccount } },
+      { provide: DavClientService, useValue: { invalidateClient } },
       {
         provide: TokenService,
         useValue: { setPassword, getPassword, clearPassword },
@@ -382,6 +401,66 @@ describe('AuthService.getValidToken', () => {
   it('throws when no password is stored', async () => {
     getPassword.mockResolvedValue(null);
     await expect(service.getValidToken('acc-1')).rejects.toThrow(/Kein App-Passwort/);
+  });
+});
+
+async function signInOnWeb(): Promise<void> {
+  const loginPromise = service.startLogin(SERVER);
+  httpMock.expectOne('/nextcloud-proxy/index.php/login/v2').flush({
+    login: `${SERVER}/index.php/login/v2`,
+    poll: { endpoint: `${SERVER}/index.php/login/v2/poll/abc`, token: 'poll-token' },
+  });
+  await vi.advanceTimersByTimeAsync(2000);
+  httpMock
+    .expectOne('/nextcloud-proxy/index.php/login/v2/poll/abc')
+    .flush({ server: SERVER, loginName: 'alice', appPassword: 'new-password' });
+  await loginPromise;
+}
+
+describe('AuthService signing in to an existing account', () => {
+  const existing = {
+    id: 'acc-1',
+    serverUrl: SERVER,
+    username: 'alice',
+    color: '#0082c9',
+    isActive: true,
+    sortOrder: 0,
+    addedAt: 0,
+  };
+
+  it('keeps the account, revokes the old app password and stores the new one', async () => {
+    findAccount.mockReturnValue(existing);
+
+    await signInOnWeb();
+
+    expect(findAccount).toHaveBeenCalledWith(SERVER, 'alice');
+    expect(addAccount).not.toHaveBeenCalled();
+    expect(revokeForAccount).toHaveBeenCalledWith('acc-1');
+    expect(revokeForAccount.mock.invocationCallOrder[0]).toBeLessThan(
+      setPassword.mock.invocationCallOrder[0],
+    );
+    expect(setPassword).toHaveBeenCalledWith('acc-1', 'new-password');
+    expect(invalidateClient).toHaveBeenCalledWith('acc-1');
+    expect(updateAccount).toHaveBeenCalledWith('acc-1', { needsReauth: false });
+  });
+
+  it('does not try to revoke an app password the server rejected already', async () => {
+    findAccount.mockReturnValue({ ...existing, needsReauth: true });
+
+    await signInOnWeb();
+
+    expect(revokeForAccount).not.toHaveBeenCalled();
+    expect(setPassword).toHaveBeenCalledWith('acc-1', 'new-password');
+    expect(updateAccount).toHaveBeenCalledWith('acc-1', { needsReauth: false });
+  });
+});
+
+describe('AuthService.markNeedsReauth', () => {
+  it('marks the account and keeps it', async () => {
+    await service.markNeedsReauth('acc-1');
+
+    expect(updateAccount).toHaveBeenCalledWith('acc-1', { needsReauth: true });
+    expect(removeAccount).not.toHaveBeenCalled();
   });
 });
 

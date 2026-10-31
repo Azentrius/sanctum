@@ -141,6 +141,22 @@ export class AccountService {
     return this.accounts$.value.find((account) => account.id === id) ?? null;
   }
 
+  /**
+   * The account for this server and user, if it exists already. Server addresses compare
+   * without trailing slashes and case; user names compare without case, as Nextcloud logins do.
+   */
+  findAccount(serverUrl: string, username: string): NextcloudAccount | null {
+    const server = trimTrailingSlashes(serverUrl).toLowerCase();
+    const user = username.toLowerCase();
+    return (
+      this.accounts$.value.find(
+        (account) =>
+          trimTrailingSlashes(account.serverUrl).toLowerCase() === server &&
+          account.username.toLowerCase() === user,
+      ) ?? null
+    );
+  }
+
   async getAccountCount(): Promise<number> {
     return (await firstValueFrom(this.accounts.pipe(take(1)))).length;
   }

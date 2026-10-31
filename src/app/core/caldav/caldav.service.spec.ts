@@ -45,7 +45,7 @@ const TASK_LIST: AccountCalendar = {
 let service: CaldavService;
 let getAccount: ReturnType<typeof vi.fn>;
 let getValidToken: ReturnType<typeof vi.fn>;
-let logout: ReturnType<typeof vi.fn>;
+let markNeedsReauth: ReturnType<typeof vi.fn>;
 
 const mockClient = {
   fetchCalendars: vi.fn(),
@@ -58,14 +58,14 @@ const mockClient = {
 beforeEach(() => {
   getAccount = vi.fn().mockResolvedValue(ACCOUNT);
   getValidToken = vi.fn().mockResolvedValue('app-password');
-  logout = vi.fn().mockResolvedValue(undefined);
+  markNeedsReauth = vi.fn().mockResolvedValue(undefined);
   vi.spyOn(Capacitor, 'isNativePlatform').mockReturnValue(false);
 
   TestBed.configureTestingModule({
     providers: [
       CaldavService,
       { provide: AccountService, useValue: { getAccount } },
-      { provide: AuthService, useValue: { getValidToken, logout } },
+      { provide: AuthService, useValue: { getValidToken, markNeedsReauth } },
       {
         provide: DavClientService,
         useValue: {
@@ -388,13 +388,13 @@ describe('CaldavService.runDavOperation auth handling', () => {
     mockClient.fetchCalendars.mockRejectedValue(new Error('401 Unauthorized'));
 
     await expect(service.fetchCalendars(ACCOUNT.id)).rejects.toThrow(/Sitzung abgelaufen/);
-    expect(logout).toHaveBeenCalledWith(ACCOUNT.id);
+    expect(markNeedsReauth).toHaveBeenCalledWith(ACCOUNT.id);
   });
 
   it('rethrows non-auth errors unchanged', async () => {
     mockClient.fetchCalendars.mockRejectedValue(new Error('network down'));
 
     await expect(service.fetchCalendars(ACCOUNT.id)).rejects.toThrow('network down');
-    expect(logout).not.toHaveBeenCalled();
+    expect(markNeedsReauth).not.toHaveBeenCalled();
   });
 });

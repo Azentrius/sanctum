@@ -2,6 +2,7 @@
 import { Routes } from '@angular/router';
 
 import { authGuard } from './core/auth/auth.guard';
+import { moduleGuard } from './core/modules/app-modules';
 
 export const appRoutes: Routes = [
   {
@@ -47,17 +48,20 @@ export const appRoutes: Routes = [
   {
     path: 'tasks',
     loadChildren: () => import('./features/tasks/tasks.routes').then((m) => m.tasksRoutes),
+    canMatch: [moduleGuard('tasks')],
     canActivate: [authGuard],
   },
   {
     path: 'contacts',
     loadChildren: () =>
       import('./features/contacts/contacts.routes').then((m) => m.contactsRoutes),
+    canMatch: [moduleGuard('contacts')],
     canActivate: [authGuard],
   },
   {
     path: 'notes',
     loadChildren: () => import('./features/notes/notes.routes').then((m) => m.notesRoutes),
+    canMatch: [moduleGuard('notes')],
     canActivate: [authGuard],
   },
   {

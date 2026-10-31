@@ -178,7 +178,7 @@ export class CarddavService {
 
   /**
    * Runs a DAV operation against a (cached) client. On a genuine auth failure
-   * the cached client is dropped and the account is logged out; every other
+   * the cached client is dropped and the account is marked for signing in again; every other
    * error propagates unchanged. Mirrors CaldavService: there is no retry.
    */
   private async execute<T>(
@@ -196,7 +196,7 @@ export class CarddavService {
         throw error;
       }
       this.davClientService.invalidateClient(accountId);
-      await this.authService.logout(accountId);
+      await this.authService.markNeedsReauth(accountId);
       throw new Error('Sitzung abgelaufen. Bitte erneut anmelden.');
     }
   }

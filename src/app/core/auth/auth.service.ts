@@ -4,7 +4,7 @@ import {
   HttpErrorResponse,
   HttpHeaders,
 } from '@angular/common/http';
-import { Injectable, inject } from '@angular/core';
+import { Injectable, Injector, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { Browser } from '@capacitor/browser';
 import { Capacitor } from '@capacitor/core';
@@ -14,7 +14,10 @@ import { firstValueFrom, take } from 'rxjs';
 import { nativeHttpRequest } from '../http/native-http.util';
 import { normalizeNativeHttpBody } from '../http/ocs-response.util';
 import { trimTrailingSlashes } from '../string/string.util';
+import { NextcloudAccount } from '../accounts/account.model';
 import { AccountService } from '../accounts/account.service';
+import { DavClientService } from '../dav/dav-client.service';
+import { AppPasswordRevocationService } from './app-password-revocation.service';
 import { PushService } from '../push/push.service';
 import { assertLoginFlowOrigins } from './auth-url.util';
 import { normalizeServerUrl } from './server-url.util';
@@ -40,6 +43,9 @@ export class AuthService {
   private readonly certPinService = inject(CertPinService);
   private readonly pushService = inject(PushService);
   private readonly router = inject(Router);
+  // Resolved lazily: DavClientService and AppPasswordRevocationService depend on services that
+  // depend on AuthService, so injecting them as fields would be a DI cycle.
+  private readonly injector = inject(Injector);
 
   private pollTimer: ReturnType<typeof setInterval> | null = null;
 
@@ -108,6 +114,14 @@ export class AuthService {
     return token;
   }
 
+  /**
+   * The server rejected the account's app password (HTTP 401). The account and its data stay;
+   * it is marked so the user can sign in again, which replaces the app password.
+   */
+  async markNeedsReauth(accountId: string): Promise<void> {
+    await this.accountService.updateAccount(accountId, { needsReauth: true });
+  }
+
   async logout(accountId: string): Promise<void> {
     this.stopPolling();
     await this.accountService.removeAccount(accountId);
@@ -135,6 +149,12 @@ export class AuthService {
     credentials: NextcloudCredentials
   ): Promise<void> {
     const serverUrl = trimTrailingSlashes(credentials.serverUrl);
+    const existing = this.accountService.findAccount(serverUrl, credentials.loginName);
+    if (existing) {
+      await this.replaceAppPassword(existing, credentials.appPassword);
+      return;
+    }
+
     const account = await this.accountService.addAccount({
       serverUrl,
       username: credentials.loginName,
@@ -146,6 +166,23 @@ export class AuthService {
     await this.tokenService.setPassword(account.id, credentials.appPassword);
     await this.certPinService.establishTofuPin(account.id, serverUrl);
     void this.pushService.registerForAllAccounts();
+  }
+
+  /**
+   * Signing in again to an account that exists already: keeps the account and its data and
+   * swaps the app password. The previous app password is revoked on the server unless the
+   * server rejected it already.
+   */
+  private async replaceAppPassword(
+    account: NextcloudAccount,
+    appPassword: string,
+  ): Promise<void> {
+    if (!account.needsReauth) {
+      await this.injector.get(AppPasswordRevocationService).revokeForAccount(account.id);
+    }
+    await this.tokenService.setPassword(account.id, appPassword);
+    this.injector.get(DavClientService).invalidateClient(account.id);
+    await this.accountService.updateAccount(account.id, { needsReauth: false });
   }
 
   private pollForCredentials(

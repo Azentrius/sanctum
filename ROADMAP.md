@@ -5,7 +5,7 @@ the Android calendar, kept in sync in the background without a separate sync app
 from the earlier "super app" scope (tasks, files, Talk, notes, the contacts screens) is hidden until
 this works well.
 
-## 1. Focus on the calendar
+## 1. Focus on the calendar (done in 0.8.0)
 
 - One place decides which modules are visible; tasks, files, Talk, notes, contacts, the dashboard
   and the search are hidden, together with their background syncs, push registration and reminders.

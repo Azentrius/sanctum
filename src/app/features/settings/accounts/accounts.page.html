@@ -29,8 +29,21 @@
           <h2>{{ account.displayName || account.username }}</h2>
           <p>{{ getDomain(account) }}</p>
           <p>{{ account.username }}</p>
+          @if (account.needsReauth) {
+          <p class="needs-reauth">{{ 'SETTINGS.NEEDS_REAUTH' | translate }}</p>
+          }
         </ion-label>
-        @if (account.isActive) {
+        @if (account.needsReauth) {
+        <ion-button
+          slot="end"
+          fill="outline"
+          (click)="signInAgain(account)"
+          (keydown.enter)="signInAgain(account)"
+          (keydown.space)="signInAgain(account); $event.preventDefault()"
+        >
+          {{ 'SETTINGS.SIGN_IN_AGAIN' | translate }}
+        </ion-button>
+        } @else if (account.isActive) {
         <ion-icon slot="end" name="checkmark-circle" color="primary"></ion-icon>
         }
       </ion-item>

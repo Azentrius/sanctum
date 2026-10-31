@@ -11,7 +11,8 @@ changed in the [changelog](CHANGELOG.md).
 ## What it does today
 
 - **Accounts:** sign in to one or more Nextcloud servers with Nextcloud Login Flow v2 (an app
-  password, no OAuth setup on the server). App passwords are kept in the Android Keystore.
+  password, no OAuth setup on the server). App passwords are kept in the Android Keystore. When a
+  server rejects an app password, the account asks you to sign in again and keeps its data.
 - **Calendar:** month, week, day and agenda views of the calendars of all accounts, each in its
   calendar's colour; calendars can be shown or hidden; events can be created, edited and deleted.
   Changes are written with `If-Match`, so a newer version on the server is never overwritten.
@@ -21,7 +22,8 @@ changed in the [changelog](CHANGELOG.md).
   choice in the settings.
 
 The app still contains modules for tasks, files, Talk, notes and contacts from its earlier scope as
-a Nextcloud "super app". They are being hidden while the calendar and its sync get the attention.
+a Nextcloud "super app". They are hidden while the calendar and its sync get the attention; one
+setting in `src/app/core/modules/app-modules.ts` decides which modules the app shows.
 
 ## Building
 

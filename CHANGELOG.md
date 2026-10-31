@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.9.0 – 2026-11-01
+
+Sanctum follows the Azentrius design system and has its new icon.
+
+- Colours, type and controls come from the design system: its dark and light themes, DM Sans, pill
+  buttons, flat cards and lists, tabs with a line under the selected one, no ripple on touch. The
+  calendar views use the same colours.
+- New app icon: a gold shield on ink with the dot of the word mark as the light inside. The start
+  screen is ink with the icon, the notification icon is the white shield.
+- The sign-in and lock screens show the name as "Sanctum." with the dot in the signature colour.
+- The README and the roadmap describe Sanctum as what it is meant to become: Nextcloud on Android in
+  one app, starting with the calendar.
+
 ## 0.8.0 – 2026-10-31
 
 Sanctum shows only the calendar for now, and an account no longer disappears when its server

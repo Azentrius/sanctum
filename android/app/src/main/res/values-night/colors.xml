@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <!-- Azentrius dunkel: bg-page and primary -->
+    <color name="az_bg_page">#FF0A0A0F</color>
+    <color name="az_primary">#FFC8A96E</color>
+</resources>

@@ -1,6 +1,11 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { Component, Input } from '@angular/core';
 
+/**
+ * The Sanctum mark (shield with the dot, gold on ink, from the Azentrius design system) and, on
+ * request, the name as the app shows it: "Sanctum" in DM Sans 600 with the dot of the word mark in
+ * the signature colour. Screen readers hear only "Sanctum".
+ */
 @Component({
   selector: 'app-logo',
   imports: [],
@@ -14,12 +19,12 @@ import { Component, Input } from '@angular/core';
     >
       <img
         class="logo__mark"
-        src="assets/branding/sanctum-logo.svg"
+        src="assets/branding/sanctum-mark.svg"
         alt=""
         aria-hidden="true"
       />
       @if (wordmark) {
-      <span class="logo__word">Sanctum</span>
+      <span class="logo__word" aria-hidden="true">Sanctum<span class="logo__dot">.</span></span>
       }
     </span>
   `,
@@ -28,33 +33,37 @@ import { Component, Input } from '@angular/core';
       .logo {
         display: inline-flex;
         align-items: center;
-        gap: 0.5em;
+        gap: 12px;
       }
       .logo--stacked {
         flex-direction: column;
-        gap: 0.45em;
+        gap: 16px;
       }
       .logo__mark {
         width: var(--logo-size, 40px);
         height: var(--logo-size, 40px);
         display: block;
-        filter: drop-shadow(0 6px 18px rgba(83, 70, 201, 0.35));
+        border-radius: 22%;
       }
       .logo__word {
-        font-family: var(--sanctum-font-display, 'Sora', sans-serif);
-        font-weight: 700;
-        letter-spacing: -0.02em;
-        font-size: calc(var(--logo-size, 40px) * 0.72);
-        color: var(--ion-text-color);
+        font-family: var(--ion-font-family);
+        font-weight: 600;
+        font-size: 22px;
+        line-height: 28px;
+        letter-spacing: 0;
+        color: var(--text);
+      }
+      .logo__dot {
+        color: var(--signature);
       }
     `,
   ],
 })
 export class LogoComponent {
-  /** Kantenlänge der Bildmarke in px. */
+  /** Edge length of the mark in px. */
   @Input() size = 40;
-  /** Wortmarke „Sanctum" mit anzeigen. */
+  /** Also show the name "Sanctum." */
   @Input() wordmark = false;
-  /** Marke über Wortmarke stapeln statt nebeneinander. */
+  /** Stack the mark above the name instead of side by side. */
   @Input() stacked = false;
 }

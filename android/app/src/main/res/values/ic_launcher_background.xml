@@ -1,4 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Azentrius Designsystem · Sanctum · erzeugt von scripts/app-icon-sanctum.py, nicht von Hand ändern -->
 <resources>
-    <color name="ic_launcher_background">#FFFFFF</color>
+    <!-- brand-ink: Grund des App-Symbols und des Startbilds -->
+    <color name="ic_launcher_background">#FF0A0A0F</color>
 </resources>

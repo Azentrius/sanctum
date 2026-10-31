@@ -1,0 +1,70 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button [defaultHref]="isEdit ? '/notes/' + (original?.id ?? '') : '/notes'"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ (isEdit ? 'notes.EDIT_TITLE' : 'notes.NEW_TITLE') | translate }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="togglePreview()" (keydown.enter)="togglePreview()" (keydown.space)="togglePreview(); $event.preventDefault()" fill="clear">
+        {{ (previewMode ? 'notes.EDIT_MODE' : 'notes.PREVIEW_MODE') | translate }}
+      </ion-button>
+      <ion-button strong="true" (click)="save()" (keydown.enter)="save()" (keydown.space)="save(); $event.preventDefault()" [disabled]="!writesEnabled || saving || form.invalid">
+        {{ 'notes.SAVE' | translate }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <form [formGroup]="form" class="note-form">
+    @if (!isEdit) {
+    <ion-item>
+      <ion-select
+        label="{{ 'notes.ACCOUNT' | translate }}"
+        formControlName="accountId"
+        interface="popover"
+      >
+        @for (account of activeAccounts; track account.id) {
+        <ion-select-option [value]="account.id">
+          {{ account.displayName || account.username }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    }
+
+    <ion-item>
+      <ion-input
+        label="{{ 'notes.FIELD_TITLE' | translate }}"
+        formControlName="title"
+        [placeholder]="'notes.FIELD_TITLE_PLACEHOLDER' | translate"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item>
+      <ion-input
+        label="{{ 'notes.FIELD_CATEGORY' | translate }}"
+        formControlName="category"
+        [placeholder]="'notes.FIELD_CATEGORY_PLACEHOLDER' | translate"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item lines="none">
+      <ion-toggle formControlName="favorite">{{ 'notes.FAVORITE' | translate }}</ion-toggle>
+    </ion-item>
+
+    @if (previewMode) {
+    <div class="preview-pane">
+      <app-markdown-view [content]="form.controls.content.value"></app-markdown-view>
+    </div>
+    } @else {
+    <ion-textarea
+      class="content-area"
+      formControlName="content"
+      [placeholder]="'notes.FIELD_CONTENT_PLACEHOLDER' | translate"
+      [autoGrow]="true"
+    ></ion-textarea>
+    }
+  </form>
+</ion-content>

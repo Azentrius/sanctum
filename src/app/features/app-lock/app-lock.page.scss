@@ -1,0 +1,54 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.app-lock-content {
+  --background: var(--ion-background-color);
+}
+
+.lock-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+.app-icon {
+  font-size: 80px;
+  color: var(--ion-color-primary);
+  margin-bottom: 0.75rem;
+}
+
+.app-name {
+  color: var(--ion-text-color);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 0 0 3rem;
+}
+
+.biometry-icon {
+  font-size: 48px;
+  color: var(--ion-color-medium);
+  margin-bottom: 1rem;
+}
+
+.unlock-hint {
+  color: var(--ion-color-medium);
+  font-size: 1rem;
+  margin-bottom: 2rem;
+}
+
+.unlock-button {
+  width: 100%;
+  max-width: 280px;
+}
+
+.error-note {
+  display: block;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.reset-button {
+  margin-top: 1.5rem;
+}

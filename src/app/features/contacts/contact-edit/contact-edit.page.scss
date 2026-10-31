@@ -1,0 +1,30 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.section-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 22px 6px 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--ion-color-medium);
+
+  ion-button {
+    --padding-start: 4px;
+    --padding-end: 4px;
+    margin: 0;
+    height: 28px;
+  }
+}
+
+.section-gap {
+  height: 22px;
+}
+
+.type-select {
+  min-width: 84px;
+  max-width: 110px;
+  --padding-start: 0;
+  color: var(--ion-color-medium);
+}

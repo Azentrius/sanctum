@@ -1,0 +1,162 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.dashboard-content {
+  padding: 16px;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.greeting {
+  padding: 24px 8px 16px;
+
+  h1 {
+    font-size: 1.6rem;
+    font-weight: 700;
+    margin: 0 0 4px;
+    color: var(--ion-text-color);
+  }
+
+  p {
+    font-size: 0.9rem;
+    color: var(--ion-color-medium);
+    margin: 0;
+  }
+}
+
+.quick-access {
+  background: var(--ion-card-background);
+  border-radius: 16px;
+  padding: 12px 0;
+  margin-bottom: 24px;
+
+  .quick-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 4px;
+    cursor: pointer;
+    border-radius: 12px;
+    transition: background 0.15s;
+    border: none;
+    background: transparent;
+    font: inherit;
+    color: inherit;
+    width: 100%;
+
+    &:active {
+      background: var(--ion-color-step-100);
+    }
+
+    ion-icon {
+      font-size: 1.6rem;
+      color: var(--ion-color-primary);
+    }
+
+    span {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--ion-text-color);
+      text-align: center;
+    }
+  }
+
+  .talk-btn {
+    position: relative;
+
+    .talk-badge {
+      position: absolute;
+      top: 2px;
+      right: 8px;
+      font-size: 0.65rem;
+      min-width: 1.1rem;
+    }
+  }
+}
+
+.capability-hint {
+  margin: 0 12px 8px;
+  font-size: 0.75rem;
+  color: var(--ion-color-medium);
+  text-align: center;
+}
+
+.section {
+  margin-bottom: 24px;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 4px 8px;
+
+  h2 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+  }
+}
+
+.event-item {
+  --padding-start: 14px;
+  --inner-padding-end: 8px;
+  margin-bottom: 4px;
+  border-radius: 12px;
+  background: var(--ion-color-step-50);
+}
+
+.event-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+  margin-inline-end: 12px;
+}
+
+.event-date {
+  font-weight: 500;
+}
+
+.event-time {
+  color: var(--ion-color-medium);
+}
+
+.empty-state {
+  text-align: center;
+  padding: 32px 16px;
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    font-size: 2.5rem;
+    margin-bottom: 8px;
+  }
+
+  p {
+    font-size: 0.9rem;
+    margin: 0;
+  }
+}
+
+.loading-state {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 32px 16px;
+
+  ion-spinner {
+    width: 32px;
+    height: 32px;
+    color: var(--ion-color-primary);
+  }
+}
+
+.sync-error {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--ion-color-danger);
+
+  ion-icon {
+    font-size: 1rem;
+  }
+}

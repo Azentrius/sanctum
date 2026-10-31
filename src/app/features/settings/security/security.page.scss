@@ -1,0 +1,10 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.loading-placeholder {
+  padding: 1rem;
+}
+
+.skeleton-row {
+  height: 3rem;
+  margin-bottom: 0.75rem;
+  border-radius: var(--sanctum-radius-sm, 8px);
+}

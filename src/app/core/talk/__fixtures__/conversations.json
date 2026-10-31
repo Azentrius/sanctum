@@ -1,0 +1,27 @@
+[
+  {
+    "token": "roomtoken1",
+    "type": 2,
+    "name": "Team Chat",
+    "displayName": "Team Chat",
+    "lastActivity": 1718208000,
+    "unreadMessages": 2,
+    "readOnly": 0,
+    "lastMessage": {
+      "id": 42,
+      "actorId": "alice",
+      "actorDisplayName": "Alice",
+      "message": "Hello team",
+      "timestamp": 1718207900,
+      "messageType": "comment"
+    }
+  },
+  {
+    "token": "o2otoken",
+    "type": 1,
+    "displayName": "Bob",
+    "lastActivity": 1718200000,
+    "unreadMessages": 0,
+    "readOnly": 0
+  }
+]

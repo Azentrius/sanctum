@@ -1,0 +1,15 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.note-form {
+  padding: 8px 0 24px;
+}
+
+.content-area {
+  min-height: 280px;
+  padding: 0 16px;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+.preview-pane {
+  padding: 16px;
+  border-top: 1px solid var(--ion-item-border-color, var(--ion-border-color, #c8c7cc));
+}

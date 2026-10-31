@@ -1,0 +1,20 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<cdk-virtual-scroll-viewport
+  [class]="'sanctum-virtual-viewport ' + viewportClass"
+  [style.height]="height"
+>
+  <ng-container
+    *cdkVirtualFor="
+      let item of items;
+      trackBy: trackBy;
+      templateCacheSize: templateCacheSize;
+      let index = index
+    "
+  >
+    <div class="sanctum-virtual-row" [appSanctumVirtualRow]="index">
+      <ng-container
+        *ngTemplateOutlet="itemTemplate; context: { $implicit: item, index: index }"
+      ></ng-container>
+    </div>
+  </ng-container>
+</cdk-virtual-scroll-viewport>

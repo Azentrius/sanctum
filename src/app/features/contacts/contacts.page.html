@@ -1,0 +1,79 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'CONTACTS.TITLE' | translate" backHref="/tabs/home">
+  <ion-toolbar>
+    <ion-searchbar
+      [value]="searchTerm"
+      [placeholder]="'CONTACTS.SEARCH_PLACEHOLDER' | translate"
+      (ionInput)="onSearch($any($event).detail.value)"
+      [debounce]="150"
+    ></ion-searchbar>
+  </ion-toolbar>
+</app-page-header>
+
+<ion-content>
+  <app-offline-banner
+    [visible]="offlineBannerVisible"
+    [message]="offlineBannerMessage"
+  ></app-offline-banner>
+
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      refreshingSpinner="crescent"
+      [refreshingText]="'COMMON.SYNCING' | translate"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  @if (isInitialLoad) {
+  <div class="state-center">
+    <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+  </div>
+  } @else if (rows.length === 0) {
+  <div class="state-center">
+    <ion-icon name="people-outline" class="empty-icon"></ion-icon>
+    <h2>{{ 'CONTACTS.EMPTY_TITLE' | translate }}</h2>
+    <p>{{ 'CONTACTS.EMPTY_HINT' | translate }}</p>
+  </div>
+  } @else {
+  <app-sanctum-virtual-list
+    [items]="rows"
+    [itemSize]="56"
+    [trackBy]="trackByRow"
+    viewportClass="contact-viewport"
+    height="100%"
+  >
+    <ng-template #itemTemplate let-row>
+      @if (row.kind === 'header') {
+      <div class="contact-header">{{ row.letter }}</div>
+      } @else {
+      <ion-item button [routerLink]="['/contacts', row.contact.id]" detail="false">
+        <div slot="start" class="avatar-wrap">
+          @if (row.contact.photoUrl) {
+          <ion-avatar>
+            <img [src]="row.contact.photoUrl" [alt]="row.contact.displayName" loading="lazy" />
+          </ion-avatar>
+          } @else {
+          <div class="avatar-initials" [style.background]="accountColor(row.contact)">
+            {{ initials(row.contact) }}
+          </div>
+          }
+          <span class="account-dot" [style.background]="accountColor(row.contact)"></span>
+        </div>
+        <ion-label>
+          <h2>{{ row.contact.displayName }}</h2>
+          @if (row.contact.organization) {
+          <p>{{ row.contact.organization }}</p>
+          }
+        </ion-label>
+      </ion-item>
+      }
+    </ng-template>
+  </app-sanctum-virtual-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button routerLink="/contacts/new" [disabled]="!writesEnabled">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

@@ -1,0 +1,36 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Sanctum app icon">
+  <defs>
+    <linearGradient id="bg" x1="64" y1="40" x2="448" y2="472" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#2A2150"/>
+      <stop offset="0.5" stop-color="#3A2E86"/>
+      <stop offset="1" stop-color="#1A1535"/>
+    </linearGradient>
+    <linearGradient id="portal" x1="170" y1="110" x2="360" y2="430" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#A99CFA"/>
+      <stop offset="1" stop-color="#6F5FEC"/>
+    </linearGradient>
+    <radialGradient id="iconCore" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#FCE7B4"/>
+      <stop offset="0.45" stop-color="#F2BE63"/>
+      <stop offset="1" stop-color="#E0A53E"/>
+    </radialGradient>
+    <radialGradient id="iconGlow" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#F7CE7A" stop-opacity="0.7"/>
+      <stop offset="1" stop-color="#F7CE7A" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- Squircle background -->
+  <path d="M256 24 C150 24 96 24 60 60 C24 96 24 150 24 256 C24 362 24 416 60 452 C96 488 150 488 256 488 C362 488 416 488 452 452 C488 416 488 362 488 256 C488 150 488 96 452 60 C416 24 362 24 256 24 Z"
+        fill="url(#bg)"/>
+
+  <!-- Portal -->
+  <g transform="translate(106 86) scale(3.0)">
+    <path d="M50 6 C70 6 84 21 84 43 L84 58 C84 78 69 91 50 96 C31 91 16 78 16 58 L16 43 C16 21 30 6 50 6 Z"
+          fill="url(#portal)"/>
+    <path d="M50 23 C64 23 72 34 72 47 L72 58 C72 72 62 81 50 85 C38 81 28 72 28 58 L28 47 C28 34 36 23 50 23 Z"
+          fill="none" stroke="#1F1A40" stroke-opacity="0.30" stroke-width="2.6"/>
+    <circle cx="50" cy="55" r="20" fill="url(#iconGlow)"/>
+    <circle cx="50" cy="55" r="7" fill="url(#iconCore)"/>
+  </g>
+</svg>

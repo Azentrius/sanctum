@@ -1,0 +1,61 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar color="dark">
+    <ion-title>{{ roomName || ('TALK.CALL_TITLE' | translate) }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="call-content" color="dark">
+  @if (starting || session.state === 'connecting') {
+  <div class="state-center">
+    <app-sanctum-spinner
+      [loading]="true"
+      [message]="'TALK.CALL_CONNECTING' | translate"
+    ></app-sanctum-spinner>
+  </div>
+  } @else if (session.state === 'failed') {
+  <div class="state-center">
+    <ion-icon name="alert-circle-outline" class="error-icon"></ion-icon>
+    <p>{{ session.error || ('TALK.CALL_FAILED' | translate) }}</p>
+    <ion-button (click)="hangUp()" (keydown.enter)="hangUp()" (keydown.space)="hangUp(); $event.preventDefault()">{{ 'APP.BACK' | translate }}</ion-button>
+  </div>
+  } @else {
+  <div class="video-stage">
+    <video
+      id="remote-video"
+      class="remote-video"
+      autoplay
+      playsinline
+    ></video>
+    <video
+      id="local-video"
+      class="local-video"
+      autoplay
+      playsinline
+      muted
+    ></video>
+  </div>
+  }
+</ion-content>
+
+<ion-footer class="call-footer">
+  <ion-toolbar color="dark">
+    <div class="controls">
+      <ion-button type="button" fill="solid" [color]="audioEnabled ? 'medium' : 'danger'" (click)="toggleAudio()" (keydown.enter)="toggleAudio()" (keydown.space)="toggleAudio(); $event.preventDefault()">
+        <ion-icon
+          slot="icon-only"
+          [name]="audioEnabled ? 'mic' : 'mic-off'"
+        ></ion-icon>
+      </ion-button>
+      <ion-button type="button" fill="solid" color="danger" class="hang-up" (click)="hangUp()" (keydown.enter)="hangUp()" (keydown.space)="hangUp(); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="call"></ion-icon>
+      </ion-button>
+      <ion-button type="button" fill="solid" [color]="videoEnabled ? 'medium' : 'danger'" (click)="toggleVideo()" (keydown.enter)="toggleVideo()" (keydown.space)="toggleVideo(); $event.preventDefault()">
+        <ion-icon
+          slot="icon-only"
+          [name]="videoEnabled ? 'videocam' : 'videocam-off'"
+        ></ion-icon>
+      </ion-button>
+    </div>
+  </ion-toolbar>
+</ion-footer>

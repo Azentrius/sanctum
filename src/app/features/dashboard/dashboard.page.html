@@ -1,0 +1,259 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'APP.NAME' | translate"></app-page-header>
+
+<ion-content [fullscreen]="true">
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      (click)="quickCreate()"
+      (keydown.enter)="quickCreate()"
+      (keydown.space)="quickCreate(); $event.preventDefault()"
+      [appAriaLabel]="'QUICK_CREATE.TITLE' | translate"
+      appAiHint="Quick-create an event or task"
+    >
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+
+  <ion-refresher slot="fixed" (ionRefresh)="refresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      refreshingSpinner="crescent"
+      [refreshingText]="'COMMON.SYNCING' | translate"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="dashboard-content">
+    <div class="greeting">
+      <h1>{{ greeting | translate }}</h1>
+      @if (accounts$ | async; as accounts) {
+      <p>{{ accounts[0].displayName || accounts[0].username }}</p>
+      }
+    </div>
+
+    <div class="quick-access">
+      <ion-grid>
+        <ion-row>
+          <ion-col size="3">
+            <button type="button" class="quick-btn" (click)="goToCalendar()">
+              <ion-icon name="calendar-outline"></ion-icon>
+              <span>{{ 'NAV.CALENDAR' | translate }}</span>
+            </button>
+          </ion-col>
+          <ion-col size="3">
+            <button type="button" class="quick-btn" (click)="goToTasks()">
+              <ion-icon name="checkbox-outline"></ion-icon>
+              <span>{{ 'NAV.TASKS' | translate }}</span>
+            </button>
+          </ion-col>
+          <ion-col size="3">
+            <button type="button" class="quick-btn" (click)="goToContacts()">
+              <ion-icon name="people-outline"></ion-icon>
+              <span>{{ 'NAV.CONTACTS' | translate }}</span>
+            </button>
+          </ion-col>
+          <ion-col size="3">
+            <button type="button" class="quick-btn" (click)="goToFiles()">
+              <ion-icon name="folder-outline"></ion-icon>
+              <span>{{ 'NAV.FILES' | translate }}</span>
+            </button>
+          </ion-col>
+        </ion-row>
+        <!-- Talk capability branches (#91). Branch logic mirrored in
+             dashboard.page.spec.ts via the data-testid hooks below: keep the
+             three branches and their test ids in sync with that spec. -->
+        @if (talkAvailable) {
+        <ion-row>
+          <ion-col size="3">
+            <button
+              type="button"
+              class="quick-btn talk-btn"
+              data-testid="talk-quick-btn"
+              (click)="goToTalk()"
+            >
+              <ion-icon name="chatbubbles-outline"></ion-icon>
+              <span>{{ 'NAV.TALK' | translate }}</span>
+              @if (totalUnreadTalk$ | async; as unread) {
+              @if (unread > 0) {
+              <ion-badge color="danger" class="talk-badge">{{ unread }}</ion-badge>
+              }
+              }
+            </button>
+          </ion-col>
+        </ion-row>
+        } @else if (talkChecked) {
+        <p class="capability-hint" data-testid="talk-unavailable-hint">{{ 'CAPABILITIES.TALK_UNAVAILABLE_HINT' | translate }}</p>
+        } @else {
+        <p class="capability-hint" data-testid="talk-loading-hint">{{ 'CAPABILITIES.LOADING' | translate }}</p>
+        }
+        @if (notesAvailable) {
+        <ion-row>
+          <ion-col size="3">
+            <button
+              type="button"
+              class="quick-btn notes-btn"
+              data-testid="notes-quick-btn"
+              (click)="goToNotes()"
+            >
+              <ion-icon name="document-text-outline"></ion-icon>
+              <span>{{ 'NAV.NOTES' | translate }}</span>
+            </button>
+          </ion-col>
+        </ion-row>
+        } @else if (notesChecked) {
+        <p class="capability-hint" data-testid="notes-unavailable-hint">{{ 'CAPABILITIES.NOTES_UNAVAILABLE_HINT' | translate }}</p>
+        } @else {
+        <p class="capability-hint" data-testid="notes-loading-hint">{{ 'CAPABILITIES.LOADING' | translate }}</p>
+        }
+      </ion-grid>
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2>{{ 'DASHBOARD.DUE_TASKS' | translate }}</h2>
+        <ion-button fill="clear" size="small" (click)="goToTasks()" (keydown.enter)="goToTasks()" (keydown.space)="goToTasks(); $event.preventDefault()">
+          {{ 'DASHBOARD.ALL_TASKS' | translate }}
+        </ion-button>
+      </div>
+
+      @if (dueTasks$ | async; as tasks) { @if ((isLoading || isSyncing) && tasks.length === 0) {
+      <div class="loading-state">
+        <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+      </div>
+      } @else if (tasks.length === 0) {
+      <div class="empty-state">
+        <ion-icon name="checkbox-outline"></ion-icon>
+        <p>{{ 'DASHBOARD.NO_DUE_TASKS' | translate }}</p>
+      </div>
+      } @else {
+      <ion-list lines="none">
+        @for (task of tasks; track task.id) {
+        <ion-item class="event-item" button (click)="goToTasks()" (keydown.enter)="goToTasks()" (keydown.space)="goToTasks(); $event.preventDefault()">
+          <div class="event-dot" [style.background]="task.listColor" slot="start"></div>
+          <ion-label>
+            <h3>{{ task.title }}</h3>
+            <p>
+              <span class="event-date">{{ formatTaskDue(task) }}</span>
+              @if (task.listName) {
+              <span class="event-time"> · {{ task.listName }}</span>
+              }
+            </p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } }
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2>{{ 'DASHBOARD.UPCOMING' | translate }}</h2>
+        <ion-button fill="clear" size="small" (click)="goToCalendar()" (keydown.enter)="goToCalendar()" (keydown.space)="goToCalendar(); $event.preventDefault()">
+          {{ 'DASHBOARD.ALL_EVENTS' | translate }}
+        </ion-button>
+      </div>
+
+      @if (upcomingEvents$ | async; as events) { @if ((isLoading || isSyncing) &&
+      events.length === 0) {
+      <div class="loading-state">
+        <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+      </div>
+      } @else if (events.length === 0) {
+      <div class="empty-state">
+        <ion-icon name="calendar-outline"></ion-icon>
+        <p>{{ 'DASHBOARD.NO_UPCOMING' | translate }}</p>
+      </div>
+      } @else {
+      <ion-list lines="none">
+        @for (event of events; track event.id) {
+        <ion-item class="event-item" button (click)="goToCalendar()" (keydown.enter)="goToCalendar()" (keydown.space)="goToCalendar(); $event.preventDefault()">
+          <div
+            class="event-dot"
+            [style.background]="event.calendarColor"
+            slot="start"
+          ></div>
+          <ion-label>
+            <h3>{{ event.title }}</h3>
+            <p>
+              <span class="event-date">{{ formatEventDate(event) }}</span>
+              @if (!event.allDay) {
+              <span class="event-time"> · {{ formatEventTime(event) }}</span>
+              }
+            </p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } }
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2>{{ 'DASHBOARD.BIRTHDAYS' | translate }}</h2>
+        <ion-button fill="clear" size="small" (click)="goToContacts()" (keydown.enter)="goToContacts()" (keydown.space)="goToContacts(); $event.preventDefault()">
+          {{ 'NAV.CONTACTS' | translate }}
+        </ion-button>
+      </div>
+
+      @if (birthdays$ | async; as birthdays) { @if ((isLoading || isSyncing) &&
+      birthdays.length === 0) {
+      <div class="loading-state">
+        <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+      </div>
+      } @else if (birthdays.length === 0) {
+      <div class="empty-state">
+        <ion-icon name="gift-outline"></ion-icon>
+        <p>{{ 'DASHBOARD.NO_BIRTHDAYS' | translate }}</p>
+      </div>
+      } @else {
+      <ion-list lines="none">
+        @for (entry of birthdays; track entry.contact.id) {
+        <ion-item class="event-item" button (click)="goToContacts()" (keydown.enter)="goToContacts()" (keydown.space)="goToContacts(); $event.preventDefault()">
+          <div class="event-dot" [style.background]="entry.accountColor" slot="start"></div>
+          <ion-label>
+            <h3>{{ entry.contact.displayName }}</h3>
+            <p>
+              <span class="event-date">{{
+                entry.date.toLocaleDateString([], { day: 'numeric', month: 'short' })
+              }}</span>
+            </p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } }
+    </div>
+
+    <div class="section">
+      <div class="section-header">
+        <h2>{{ 'DASHBOARD.SYNC' | translate }}</h2>
+      </div>
+
+      @if (accounts$ | async; as accounts) {
+      @if (syncStatuses$ | async; as statuses) {
+      <ion-list lines="none">
+        @for (account of accounts; track account.id) {
+        @let status = statuses.get(account.id);
+        <ion-item class="event-item">
+          <div class="event-dot" [style.background]="account.color" slot="start"></div>
+          <ion-label>
+            <h3>{{ account.displayName || account.username }}</h3>
+            <p>
+              @if (status?.isSyncing) {
+              <span>{{ 'COMMON.SYNCING' | translate }}</span>
+              } @else if (status?.error) {
+              <span class="sync-error">
+                <ion-icon name="alert-circle-outline"></ion-icon>
+                {{ status?.error }}
+              </span>
+              } @else {
+              <span class="event-time">{{ formatSyncTime(status?.lastSync ?? null) }}</span>
+              }
+            </p>
+          </ion-label>
+        </ion-item>
+        }
+      </ion-list>
+      } }
+    </div>
+  </div>
+</ion-content>

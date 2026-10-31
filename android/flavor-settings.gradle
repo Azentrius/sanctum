@@ -1,0 +1,6 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// FOSS stub module for @capacitor/push-notifications (no Firebase/GMS). See #114.
+include ':capacitor-push-notifications-foss'
+project(':capacitor-push-notifications-foss').projectDir = new File(
+    rootDir, 'foss-stubs/capacitor-push-notifications'
+)

@@ -1,0 +1,32 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-content class="cert-pin-mismatch-content" [fullscreen]="true">
+  <div class="panel">
+    <app-logo [size]="72" [wordmark]="true" [stacked]="true"></app-logo>
+    <h1>{{ 'security.pinning.title' | translate }}</h1>
+    <p class="lead">{{ 'security.pinning.body' | translate }}</p>
+    <p class="host">{{ 'security.pinning.host' | translate }}: {{ host }}</p>
+
+    <ion-button
+      expand="block"
+      type="button"
+      color="danger"
+      (click)="resetAndSignIn()"
+      (keydown.enter)="resetAndSignIn()"
+      (keydown.space)="resetAndSignIn(); $event.preventDefault()"
+      [disabled]="busy()"
+    >
+      {{ 'security.pinning.reset' | translate }}
+    </ion-button>
+
+    @if (actionError()) {
+      <ion-note color="danger" class="action-error">
+        {{ actionError() | translate }}
+      </ion-note>
+    }
+
+    <div class="diagnostics" data-testid="cert-pin-diagnostics">
+      <p>{{ 'security.pinning.diagHost' | translate }}: {{ host }}</p>
+      <p>{{ 'security.pinning.diagTime' | translate }}: {{ occurredAt }}</p>
+    </div>
+  </div>
+</ion-content>

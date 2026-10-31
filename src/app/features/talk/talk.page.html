@@ -1,0 +1,64 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'TALK.TITLE' | translate" backHref="/tabs/home"></app-page-header>
+
+<ion-content>
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      refreshingSpinner="crescent"
+      [refreshingText]="'COMMON.SYNCING' | translate"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  @if (isInitialLoad) {
+  <div class="state-center">
+    <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+  </div>
+  } @else if (rows.length === 0 && talkUnavailable) {
+  <div class="state-center">
+    <ion-icon name="chatbubbles-outline" class="empty-icon"></ion-icon>
+    <h2>{{ 'TALK.NOT_AVAILABLE_TITLE' | translate }}</h2>
+    <p>{{ 'TALK.NOT_AVAILABLE_HINT' | translate }}</p>
+  </div>
+  } @else if (rows.length === 0) {
+  <div class="state-center">
+    <ion-icon name="chatbubbles-outline" class="empty-icon"></ion-icon>
+    <h2>{{ 'TALK.EMPTY_TITLE' | translate }}</h2>
+    <p>{{ 'TALK.EMPTY_HINT' | translate }}</p>
+  </div>
+  } @else {
+  <ion-list lines="full">
+    @for (row of rows; track trackByRow($index, row)) {
+    <ion-item
+      button
+      detail="false"
+      (click)="openConversation(row.conversation)"
+      (keydown.enter)="openConversation(row.conversation)"
+      (keydown.space)="openConversation(row.conversation); $event.preventDefault()"
+    >
+      <div slot="start" class="avatar-wrap">
+        <div class="avatar-initials" [style.background]="row.accountColor">
+          {{ row.initials }}
+        </div>
+        <span class="account-dot" [style.background]="row.accountColor"></span>
+      </div>
+      <ion-label>
+        <h2>
+          {{ row.conversation.displayName }}
+          @if (row.conversation.unreadCount > 0) {
+          <ion-badge color="primary">{{ row.conversation.unreadCount }}</ion-badge>
+          }
+        </h2>
+        @if (row.conversation.lastMessage) {
+        <p class="last-message">
+          <span class="actor">{{ row.conversation.lastMessage.actorDisplayName }}:</span>
+          {{ row.conversation.lastMessage.message }}
+        </p>
+        }
+        <p class="meta">{{ row.relativeTime }}</p>
+      </ion-label>
+    </ion-item>
+    }
+  </ion-list>
+  }
+</ion-content>

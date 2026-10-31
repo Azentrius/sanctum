@@ -1,0 +1,186 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'NAV.FILES' | translate" backHref="/tabs/home">
+  <ion-buttons headerActions>
+    @if (account) {
+      <ion-button
+        fill="clear"
+        [disabled]="!writesEnabled"
+        (click)="openAddMenu()"
+        (keydown.enter)="openAddMenu()"
+        (keydown.space)="openAddMenu(); $event.preventDefault()"
+        [appAriaLabel]="'FILES.ADD' | translate"
+      >
+        <ion-icon slot="icon-only" name="add-outline"></ion-icon>
+      </ion-button>
+    }
+  </ion-buttons>
+</app-page-header>
+
+<ion-content>
+  @if (account) {
+    <app-offline-banner
+      [visible]="offlineBannerVisible"
+      [message]="offlineBannerMessage"
+    ></app-offline-banner>
+
+    <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+      <ion-refresher-content></ion-refresher-content>
+    </ion-refresher>
+
+    <ion-toolbar class="files-breadcrumb">
+      <ion-breadcrumbs #crumbBar>
+        @if (accounts.length > 1) {
+          <ion-breadcrumb
+            (click)="backToAccounts()"
+            (keydown.enter)="backToAccounts()"
+            (keydown.space)="backToAccounts(); $event.preventDefault()"
+            tabindex="0"
+          >
+            <ion-icon name="people-outline"></ion-icon>
+          </ion-breadcrumb>
+        }
+        <ion-breadcrumb
+          (click)="navigateTo('/')"
+          (keydown.enter)="navigateTo('/')"
+          (keydown.space)="navigateTo('/'); $event.preventDefault()"
+          tabindex="0"
+        >
+          <ion-icon name="home-outline"></ion-icon>
+        </ion-breadcrumb>
+        @for (crumb of crumbs; track crumb.path) {
+          <ion-breadcrumb
+            (click)="navigateTo(crumb.path)"
+            (keydown.enter)="navigateTo(crumb.path)"
+            (keydown.space)="navigateTo(crumb.path); $event.preventDefault()"
+            tabindex="0"
+          >{{ crumb.name }}</ion-breadcrumb>
+        }
+      </ion-breadcrumbs>
+    </ion-toolbar>
+  }
+
+  <!-- No accounts at all -->
+  @if (accounts.length === 0) {
+    <div class="files-empty ion-text-center">
+      <ion-icon name="cloud-offline-outline"></ion-icon>
+      <p>{{ 'FILES.NO_ACCOUNT' | translate }}</p>
+    </div>
+  }
+
+  <!-- Account picker (multiple accounts, none entered) -->
+  @if (isPicker) {
+    <ion-list>
+      @for (acc of accounts; track acc.id) {
+        <ion-item button (click)="openAccount(acc)" (keydown.enter)="openAccount(acc)" (keydown.space)="openAccount(acc); $event.preventDefault()">
+          <ion-icon slot="start" name="cloud-outline"></ion-icon>
+          <ion-label>
+            <h2>{{ acc.displayName || acc.username }}</h2>
+            <p>{{ acc.serverUrl }}</p>
+          </ion-label>
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+      }
+    </ion-list>
+  }
+
+  <!-- Directory listing -->
+  @if (account) {
+    @if (items.length > 0) {
+      <app-sanctum-virtual-list
+        [items]="items"
+        [itemSize]="72"
+        [trackBy]="trackByItem"
+        viewportClass="files-viewport"
+        height="calc(100% - 56px)"
+      >
+        <ng-template #itemTemplate let-item>
+          <ion-item button [detail]="false" (click)="openItem(item)" (keydown.enter)="openItem(item)" (keydown.space)="openItem(item); $event.preventDefault()">
+            <ion-icon slot="start" [name]="iconFor(item)"></ion-icon>
+            <ion-label>
+              <h2>{{ item.name }}</h2>
+              @if (!item.isDirectory) {
+                <p>
+                  {{ sizeFor(item) }}
+                  @if (item.lastModified) {
+                    <span>· {{ item.lastModified | date: 'dd.MM.yyyy HH:mm' }}</span>
+                  }
+                </p>
+              }
+            </ion-label>
+            <ion-button
+              slot="end"
+              fill="clear"
+              color="medium"
+              (click)="openItemActions(item, $event)"
+              (keydown.enter)="openItemActions(item, $event)"
+              (keydown.space)="openItemActions(item, $event); $event.preventDefault()"
+              [appAriaLabel]="'FILES.ACTIONS' | translate"
+            >
+              <ion-icon slot="icon-only" name="ellipsis-vertical"></ion-icon>
+            </ion-button>
+          </ion-item>
+        </ng-template>
+      </app-sanctum-virtual-list>
+    }
+
+    @if (!isLoading && items.length === 0 && !error) {
+      <div class="files-empty ion-text-center">
+        <ion-icon name="folder-open-outline"></ion-icon>
+        <p>{{ 'FILES.EMPTY' | translate }}</p>
+      </div>
+    }
+
+    @if (error) {
+      <div class="files-empty ion-text-center">
+        <ion-icon name="alert-circle-outline"></ion-icon>
+        <p>{{ error }}</p>
+      </div>
+    }
+
+    @if (isLoading && items.length === 0) {
+      <div class="files-loading ion-text-center">
+        <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+      </div>
+    }
+  }
+</ion-content>
+
+<!-- In-app preview (image / text) -->
+<ion-modal [isOpen]="!!previewItem" (didDismiss)="closePreview()">
+  <ng-template>
+    <ion-header>
+      <ion-toolbar>
+        <ion-title class="ion-text-nowrap">{{ previewItem?.name }}</ion-title>
+        <ion-buttons slot="end">
+          @if (previewItem) {
+            <ion-button
+              (click)="openWith(previewItem)"
+              (keydown.enter)="openWith(previewItem)"
+              (keydown.space)="openWith(previewItem); $event.preventDefault()"
+              [appAriaLabel]="'FILES.OPEN_WITH' | translate"
+            >
+              <ion-icon slot="icon-only" name="open-outline"></ion-icon>
+            </ion-button>
+          }
+          <ion-button (click)="closePreview()" (keydown.enter)="closePreview()" (keydown.space)="closePreview(); $event.preventDefault()">{{ 'APP.CLOSE' | translate }}</ion-button>
+        </ion-buttons>
+      </ion-toolbar>
+    </ion-header>
+    <ion-content class="files-preview">
+      @if (previewLoading) {
+        <div class="files-loading ion-text-center"><app-sanctum-spinner [loading]="true"></app-sanctum-spinner></div>
+      } @else if (previewError) {
+        <div class="files-empty ion-text-center">
+          <ion-icon name="alert-circle-outline"></ion-icon>
+          <p>{{ previewError }}</p>
+        </div>
+      } @else if (previewKind === 'image') {
+        <img class="files-preview-image" [src]="previewImageUrl" [alt]="previewItem?.name" />
+      } @else if (previewKind === 'text') {
+        <pre class="files-preview-text">{{ previewText }}</pre>
+      } @else if (previewBytes) {
+        <app-file-render [kind]="renderKind" [bytes]="previewBytes"></app-file-render>
+      }
+    </ion-content>
+  </ng-template>
+</ion-modal>

@@ -1,0 +1,103 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/contacts"></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'CONTACT.DETAIL_TITLE' | translate }}</ion-title>
+    @if (contact$ | async; as contact) {
+    <ion-buttons slot="end">
+      <ion-button [disabled]="!writesEnabled" (click)="edit(contact)" (keydown.enter)="edit(contact)" (keydown.space)="edit(contact); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="create-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (contact$ | async; as contact) {
+  <div class="hero">
+    @if (contact.photoUrl) {
+    <ion-avatar class="hero-avatar">
+      <img [src]="contact.photoUrl" [alt]="contact.displayName" />
+    </ion-avatar>
+    } @else {
+    <div class="hero-initials" [style.background]="accountColor(contact)">
+      {{ initials(contact) }}
+    </div>
+    }
+    <h1>{{ contact.displayName }}</h1>
+    @if (contact.organization) {
+    <p class="org">{{ contact.organization }}</p>
+    }
+    <ion-chip [style.--background]="accountColor(contact)" class="account-chip">
+      <ion-icon name="cloud-outline"></ion-icon>
+      <ion-label>{{ accountLabel(contact) }}</ion-label>
+    </ion-chip>
+  </div>
+
+  <ion-list inset>
+    @for (phone of contact.phones; track $index) {
+    <ion-item button (click)="callNumber(phone.value)" (keydown.enter)="callNumber(phone.value)" (keydown.space)="callNumber(phone.value); $event.preventDefault()">
+      <ion-icon slot="start" name="call-outline" color="primary"></ion-icon>
+      <ion-label>
+        <h3>{{ phone.value }}</h3>
+        <p>{{ ('CONTACT.TYPE_' + phone.type.toUpperCase()) | translate }}</p>
+      </ion-label>
+    </ion-item>
+    }
+    @for (email of contact.emails; track $index) {
+    <ion-item button (click)="sendMail(email.value)" (keydown.enter)="sendMail(email.value)" (keydown.space)="sendMail(email.value); $event.preventDefault()">
+      <ion-icon slot="start" name="mail-outline" color="primary"></ion-icon>
+      <ion-label>
+        <h3>{{ email.value }}</h3>
+        <p>{{ ('CONTACT.TYPE_' + email.type.toUpperCase()) | translate }}</p>
+      </ion-label>
+    </ion-item>
+    }
+    @for (address of contact.addresses; track $index) {
+    <ion-item button (click)="openMap(contact, $index)" (keydown.enter)="openMap(contact, $index)" (keydown.space)="openMap(contact, $index); $event.preventDefault()">
+      <ion-icon slot="start" name="location-outline" color="primary"></ion-icon>
+      <ion-label class="ion-text-wrap">
+        <h3>{{ address.street }}</h3>
+        <p>{{ address.postalCode }} {{ address.city }}</p>
+        @if (address.country) {
+        <p>{{ address.country }}</p>
+        }
+      </ion-label>
+    </ion-item>
+    }
+    @if (contact.birthday) {
+    <ion-item>
+      <ion-icon slot="start" name="gift-outline" color="primary"></ion-icon>
+      <ion-label>
+        <h3>{{ formatBirthday(contact.birthday) }}</h3>
+        <p>{{ 'CONTACT.BIRTHDAY' | translate }}</p>
+      </ion-label>
+    </ion-item>
+    }
+    @if (contact.notes) {
+    <ion-item>
+      <ion-icon slot="start" name="document-text-outline" color="primary"></ion-icon>
+      <ion-label class="ion-text-wrap">
+        <h3>{{ contact.notes }}</h3>
+        <p>{{ 'CONTACT.NOTES' | translate }}</p>
+      </ion-label>
+    </ion-item>
+    }
+  </ion-list>
+
+  <div class="ion-padding">
+    <ion-button expand="block" fill="outline" color="danger" [disabled]="!writesEnabled" (click)="confirmDelete(contact)" (keydown.enter)="confirmDelete(contact)" (keydown.space)="confirmDelete(contact); $event.preventDefault()">
+      <ion-icon slot="start" name="trash-outline"></ion-icon>
+      {{ 'CONTACT.DELETE' | translate }}
+    </ion-button>
+  </div>
+  } @else {
+  <div class="not-found">
+    <ion-icon name="alert-circle-outline"></ion-icon>
+    <p>{{ 'CONTACT.NOT_FOUND' | translate }}</p>
+  </div>
+  }
+</ion-content>

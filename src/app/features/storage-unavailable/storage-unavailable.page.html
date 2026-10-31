@@ -1,0 +1,56 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-content class="storage-unavailable-content" [fullscreen]="true">
+  <div class="panel">
+    <app-logo [size]="72" [wordmark]="true" [stacked]="true"></app-logo>
+    <h1>{{ 'STORAGE_UNAVAILABLE.TITLE' | translate }}</h1>
+    <p class="lead">{{ 'STORAGE_UNAVAILABLE.BODY' | translate }}</p>
+
+    <ion-button
+      expand="block"
+      type="button"
+      (click)="retry()"
+      (keydown.enter)="retry()"
+      (keydown.space)="retry(); $event.preventDefault()"
+      [disabled]="busy()"
+    >
+      {{ 'STORAGE_UNAVAILABLE.RETRY' | translate }}
+    </ion-button>
+
+    <ion-button
+      expand="block"
+      type="button"
+      fill="outline"
+      color="danger"
+      (click)="resetCacheAndSignIn()"
+      (keydown.enter)="resetCacheAndSignIn()"
+      (keydown.space)="resetCacheAndSignIn(); $event.preventDefault()"
+      [disabled]="busy()"
+    >
+      {{ 'STORAGE_UNAVAILABLE.RESET' | translate }}
+    </ion-button>
+
+  @if (actionError()) {
+    <ion-note color="danger" class="action-error">
+      {{ actionError() | translate }}
+    </ion-note>
+  }
+
+    <ion-button
+      fill="clear"
+      size="small"
+      type="button"
+      (click)="toggleDiagnostics()"
+      (keydown.enter)="toggleDiagnostics()"
+      (keydown.space)="toggleDiagnostics(); $event.preventDefault()"
+    >
+      {{ 'STORAGE_UNAVAILABLE.DIAGNOSTICS_TOGGLE' | translate }}
+    </ion-button>
+
+  @if (showDiagnostics()) {
+    <div class="diagnostics" data-testid="storage-diagnostics">
+      <p>{{ 'STORAGE_UNAVAILABLE.DIAG_REASON' | translate }}: {{ reasonCode }}</p>
+      <p>{{ 'STORAGE_UNAVAILABLE.DIAG_TIME' | translate }}: {{ occurredAt }}</p>
+    </div>
+  }
+  </div>
+</ion-content>

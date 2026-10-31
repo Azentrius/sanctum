@@ -1,0 +1,32 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-content class="secure-state-recovery-content" [fullscreen]="true">
+  <div class="panel">
+    <app-logo [size]="72" [wordmark]="true" [stacked]="true"></app-logo>
+    <h1>{{ titleKey | translate }}</h1>
+    <p class="lead">{{ bodyKey | translate }}</p>
+
+    <ion-button
+      expand="block"
+      type="button"
+      color="danger"
+      data-testid="secure-state-recovery-reset"
+      (click)="resetAndSignIn()"
+      (keydown.enter)="resetAndSignIn()"
+      (keydown.space)="resetAndSignIn(); $event.preventDefault()"
+      [disabled]="busy()"
+    >
+      {{ 'SECURE_STATE_RECOVERY.RESET' | translate }}
+    </ion-button>
+
+    @if (actionError()) {
+      <ion-note color="danger" class="action-error">
+        {{ actionError() | translate }}
+      </ion-note>
+    }
+
+    <div class="diagnostics" data-testid="secure-state-diagnostics">
+      <p>{{ 'SECURE_STATE_RECOVERY.DIAG_REASON' | translate }}: {{ reason() }}</p>
+      <p>{{ 'SECURE_STATE_RECOVERY.DIAG_TIME' | translate }}: {{ occurredAt }}</p>
+    </div>
+  </div>
+</ion-content>

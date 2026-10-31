@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<full-backup-content>
+    <!-- Capacitor Preferences (account metadata, legacy keys) -->
+    <exclude domain="sharedpref" path="CapacitorStorage.xml" />
+    <exclude domain="sharedpref" path="CapacitorStorage" />
+    <!-- Ionic Storage SQLite DB -->
+    <exclude domain="database" path="ionic_storage" />
+    <exclude domain="database" path="ionic_storage.db" />
+</full-backup-content>

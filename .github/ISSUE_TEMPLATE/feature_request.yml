@@ -1,0 +1,29 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: Feature request
+description: Suggest an improvement to the calendar, the accounts or the sync.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please check the open issues and [ROADMAP.md](https://github.com/Azentrius/sanctum/blob/main/ROADMAP.md)
+        first. Sanctum concentrates on Nextcloud calendars and their sync with Android for now. This issue
+        is public: leave out passwords, server addresses and other private data.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem
+      description: What do you miss, or what stops you today?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposal
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives
+      description: Other solutions or workarounds you have considered.

@@ -1,0 +1,47 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-title>{{ 'AUTH.TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <div class="login-container">
+    <app-logo [size]="72" [wordmark]="true" [stacked]="true"></app-logo>
+    <h2 class="login-title">{{ 'AUTH.LOGIN_BUTTON' | translate }}</h2>
+
+    <ion-item lines="full" class="url-item">
+      <ion-label position="stacked">{{ 'AUTH.SERVER_LABEL' | translate }}</ion-label>
+      <ion-input
+        [(ngModel)]="serverUrl"
+        [placeholder]="'AUTH.SERVER_PLACEHOLDER' | translate"
+        [appAriaLabel]="'AUTH.SERVER_LABEL' | translate"
+        appAiHint="Login form: enter the HTTPS URL of your Nextcloud instance"
+        type="url"
+        inputmode="url"
+        autocomplete="url"
+        autocapitalize="off"
+        autocorrect="off"
+        (keyup.enter)="login()"
+      ></ion-input>
+    </ion-item>
+
+    <ion-button
+      expand="block"
+      (click)="login()"
+      (keydown.enter)="login()"
+      (keydown.space)="login(); $event.preventDefault()"
+      [disabled]="!serverUrl.trim() || isLoading"
+      class="login-button"
+      [appAriaLabel]="'AUTH.LOGIN_BUTTON' | translate"
+      appAiHint="Starts OAuth Login Flow v2; opens the system browser for Nextcloud authentication"
+    >
+      <ion-icon slot="start" name="log-in-outline"></ion-icon>
+      {{ 'AUTH.LOGIN_BUTTON' | translate }}
+    </ion-button>
+
+    <p class="login-hint">
+      {{ 'AUTH.LOGIN_HINT' | translate }}
+    </p>
+  </div>
+</ion-content>

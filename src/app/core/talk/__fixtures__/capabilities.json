@@ -1,0 +1,15 @@
+{
+  "ocs": {
+    "meta": {
+      "status": "ok",
+      "statuscode": 200
+    },
+    "data": {
+      "features": ["audio", "video", "chat-v2"],
+      "config": {
+        "chat-v2": true,
+        "signaling-mode": "internal"
+      }
+    }
+  }
+}

@@ -1,0 +1,213 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button type="button" (click)="goBack()" (keydown.enter)="goBack()" (keydown.space)="goBack(); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="arrow-back"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      <div class="room-title">
+        <span class="room-name">{{ roomName || ('TALK.CHAT_TITLE' | translate) }}</span>
+        @if (participants.length > 0) {
+        <div
+          class="participants-row"
+          [attr.aria-label]="'TALK.PARTICIPANTS' | translate"
+        >
+          @for (participant of visibleParticipants; track participant.attendeeId) {
+          <span
+            class="participant-avatar"
+            [title]="participant.displayName"
+            [attr.aria-label]="participant.displayName"
+          >
+            {{ participantInitials(participant.displayName) }}
+          </span>
+          }
+          @if (participantsOverflow > 0) {
+          <span class="participant-overflow">+{{ participantsOverflow }}</span>
+          }
+        </div>
+        }
+      </div>
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button
+        type="button"
+        (click)="startCall()"
+        (keydown.enter)="startCall()"
+        (keydown.space)="startCall(); $event.preventDefault()"
+        [appAriaLabel]="'TALK.START_CALL' | translate"
+      >
+        <ion-icon slot="icon-only" name="call-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="chat-content">
+  @if (isLoading && messages.length === 0) {
+  <div class="state-center">
+    <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+  </div>
+  } @else if (mainMessages.length === 0) {
+  <div class="state-center">
+    <p>{{ 'TALK.NO_MESSAGES' | translate }}</p>
+  </div>
+  } @else {
+  <div class="messages-shell">
+    @if (loadingOlderHistory) {
+    <div class="history-loading">
+      <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+    </div>
+    }
+    <app-sanctum-virtual-list
+      #messageList
+      [items]="mainMessages"
+      [itemSize]="messageItemSize"
+      [trackBy]="trackByMessage"
+      viewportClass="messages-viewport"
+      height="100%"
+      [nearStartThreshold]="3"
+      (nearStart)="loadOlderMessages()"
+    >
+      <ng-template #itemTemplate let-message>
+        <div
+          class="message-wrapper"
+          [class.own]="isOwnMessage(message)"
+          [class.system]="message.messageType === 'system'"
+          [class.thread-active]="activeThread?.id === message.id"
+        >
+          @if (message.messageType === 'system') {
+          <div class="system-message">{{ message.message }}</div>
+          } @else {
+          <div class="bubble" [style.--accent]="accountColor">
+            @if (!isOwnMessage(message)) {
+            <div class="actor">{{ message.actorDisplayName }}</div>
+            }
+            <div class="text">{{ message.message }}</div>
+            <div class="time">
+              {{ message.timestamp | date: 'shortTime' }}
+            </div>
+          </div>
+
+          @if (hasReplies(message)) {
+          <button
+            type="button"
+            class="thread-indicator"
+            [class.active]="activeThread?.id === message.id"
+            (click)="openThread(message)"
+            [attr.aria-label]="'TALK.OPEN_THREAD' | translate"
+            data-testid="talk-thread-open"
+          >
+            <ion-icon name="chatbubbles-outline"></ion-icon>
+            <span>
+              {{ getReplyCount(message) }}
+              {{
+                getReplyCount(message) === 1
+                  ? ('TALK.THREAD_REPLY' | translate)
+                  : ('TALK.THREAD_REPLIES' | translate)
+              }}
+            </span>
+          </button>
+          } @else {
+          <button
+            type="button"
+            class="thread-start-btn"
+            (click)="openThread(message)"
+            [attr.aria-label]="'TALK.THREAD_REPLY' | translate"
+            data-testid="talk-thread-open"
+          >
+            <ion-icon name="chatbubbles-outline"></ion-icon>
+            <span>{{ 'TALK.THREAD_REPLY' | translate }}</span>
+          </button>
+          }
+          }
+        </div>
+      </ng-template>
+    </app-sanctum-virtual-list>
+  </div>
+  }
+
+  @if (activeThread) {
+  <div class="thread-panel thread-panel-docked" data-testid="talk-thread-panel">
+    <div class="thread-header">
+      <span>{{ 'TALK.THREAD_TITLE' | translate }}</span>
+      <button
+        type="button"
+        (click)="closeThread()"
+        [attr.aria-label]="'TALK.CLOSE_THREAD' | translate"
+      >
+        <ion-icon name="close-outline"></ion-icon>
+      </button>
+    </div>
+
+    @if (threadLoading) {
+    <div class="thread-loading">
+      <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+    </div>
+    } @else {
+    <div class="thread-messages">
+      @for (threadMsg of threadMessages; track threadMsg.id) {
+      @if (threadMsg.messageType === 'comment') {
+      <div class="thread-message" [class.own]="isOwnMessage(threadMsg)">
+        <span class="sender-name">{{ threadMsg.actorDisplayName }}</span>
+        <p>{{ threadMsg.message }}</p>
+        <span class="message-time">
+          {{ threadMsg.timestamp | date: 'shortTime' }}
+        </span>
+      </div>
+      }
+      }
+    </div>
+    }
+
+    <div class="thread-input-area">
+      <ion-input
+        [(ngModel)]="threadDraft"
+        [placeholder]="'TALK.THREAD_REPLY_PLACEHOLDER' | translate"
+        (keyup.enter)="sendThreadReply()"
+        [disabled]="sending"
+        data-testid="talk-thread-input"
+      ></ion-input>
+      <ion-button
+        fill="clear"
+        (click)="sendThreadReply()"
+        (keydown.enter)="sendThreadReply()"
+        (keydown.space)="sendThreadReply(); $event.preventDefault()"
+        [disabled]="sending || !threadDraft.trim()"
+        [attr.aria-label]="'TALK.SEND_THREAD_REPLY' | translate"
+        data-testid="talk-thread-send"
+      >
+        <ion-icon slot="icon-only" name="send"></ion-icon>
+      </ion-button>
+    </div>
+  </div>
+  }
+</ion-content>
+
+<ion-footer>
+  <ion-toolbar>
+    <ion-item lines="none" class="composer">
+      <ion-input
+        [placeholder]="'TALK.MESSAGE_PLACEHOLDER' | translate"
+        [(ngModel)]="draft"
+        (keyup.enter)="send()"
+        [disabled]="sending"
+        data-testid="talk-message-input"
+      ></ion-input>
+      <ion-button
+        slot="end"
+        type="button"
+        fill="clear"
+        (click)="send()"
+        (keydown.enter)="send()"
+        (keydown.space)="send(); $event.preventDefault()"
+        [disabled]="sending || !draft.trim()"
+        [attr.aria-label]="'TALK.SEND' | translate"
+        data-testid="talk-send-button"
+      >
+        <ion-icon slot="icon-only" name="send"></ion-icon>
+      </ion-button>
+    </ion-item>
+  </ion-toolbar>
+</ion-footer>

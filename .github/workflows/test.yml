@@ -1,0 +1,85 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+name: test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: test-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  # Lint, unit tests and the web build.
+  test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install from the lockfile
+        run: npm ci --no-audit --no-fund
+      # Every pull request that raises the version dates its section, so a release can follow the merge.
+      - name: Changelog has a dated section for the current version
+        run: node scripts/release-notes.mjs --require-date > /dev/null
+      - name: Lint
+        run: npm run lint
+      - name: Unit tests
+        run: npm run test:ci
+      - name: Tests of the Node scripts
+        run: npm run test:scripts
+      - name: Web build
+        run: npm run build
+
+  # Both Android flavors as debug APKs, the JVM unit tests, and the check that foss has no Google code.
+  android:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Install the pinned Android SDK components
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: Install from the lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Web build and Capacitor sync
+        run: |
+          npm run build
+          npx cap sync android
+      - name: Debug APKs and JVM unit tests of both flavors
+        working-directory: android
+        run: >-
+          bash ./gradlew --no-daemon
+          assemblePlayDebug assembleFossDebug
+          testPlayDebugUnitTest testFossDebugUnitTest
+      - name: No Google Play services or Firebase in the foss APK
+        run: bash scripts/verify-foss-purity.sh android/app/build/outputs/apk/foss/debug/app-foss-debug.apk
+      - name: Keep the debug APKs
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sanctum-debug-apks
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            android/app/build/outputs/apk/play/debug/*.apk
+            android/app/build/outputs/apk/foss/debug/*.apk

@@ -1,0 +1,7 @@
+{
+  "name": "nextcloud-superapp",
+  "integrations": {
+    "capacitor": {}
+  },
+  "type": "angular"
+}

@@ -1,0 +1,32 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-content class="app-lock-content" [fullscreen]="true">
+  <div class="lock-container">
+    <app-logo [size]="72" [wordmark]="true" [stacked]="true"></app-logo>
+    <h1 class="app-name">{{ 'APP.NAME' | translate }}</h1>
+
+    <ion-icon [name]="biometryIcon" class="biometry-icon"></ion-icon>
+    <p class="unlock-hint">{{ unlockLabelKey | translate }}</p>
+
+    <ion-button expand="block" class="unlock-button" (click)="unlock()" (keydown.enter)="unlock()" (keydown.space)="unlock(); $event.preventDefault()">
+      {{ 'APP_LOCK.UNLOCK' | translate }}
+    </ion-button>
+
+    @if (errorMessage) {
+    <ion-note color="danger" class="error-note"> {{ errorMessage }} </ion-note>
+    }
+
+    @if (!resetBusy) {
+    <ion-button
+      fill="clear"
+      size="small"
+      class="reset-button"
+      data-testid="app-lock-reset"
+      (click)="confirmResetAppLock()"
+      (keydown.enter)="confirmResetAppLock()"
+      (keydown.space)="confirmResetAppLock(); $event.preventDefault()"
+    >
+      {{ 'APP_LOCK.RESET' | translate }}
+    </ion-button>
+    }
+  </div>
+</ion-content>

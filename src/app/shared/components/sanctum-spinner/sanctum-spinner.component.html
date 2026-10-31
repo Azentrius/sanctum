@@ -1,0 +1,9 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+@if (shouldShow(loading)) {
+  <div [class.sanctum-spinner-overlay]="overlay" [class.sanctum-spinner-inline]="!overlay">
+    <ion-spinner name="crescent" class="sanctum-spinner"></ion-spinner>
+    @if (message) {
+      <p class="sanctum-spinner-message">{{ message }}</p>
+    }
+  </div>
+}

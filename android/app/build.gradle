@@ -1,0 +1,107 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+apply plugin: 'com.android.application'
+
+// The version lives only in package.json; versionCode = major * 10000 + minor * 100 + patch
+// (scripts/lib/android-version-code.js uses the same formula).
+def appVersion = new groovy.json.JsonSlurper().parse(rootProject.file('../package.json')).version
+def appVersionParts = appVersion.tokenize('.').collect { it as int }
+def appVersionCode = appVersionParts[0] * 10000 + appVersionParts[1] * 100 + appVersionParts[2]
+
+def keystorePropertiesFile = rootProject.file("key.properties")
+def keystoreProperties = new Properties()
+if (keystorePropertiesFile.exists()) {
+    keystoreProperties.load(new FileInputStream(keystorePropertiesFile))
+}
+
+android {
+    namespace = "de.azentrius.sanctum"
+    compileSdk = rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "de.azentrius.sanctum"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode appVersionCode
+        versionName appVersion
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+            ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    flavorDimensions = ["distribution"]
+    productFlavors {
+        play {
+            dimension "distribution"
+            buildConfigField "String", "DISTRIBUTION_FLAVOR", '"play"'
+        }
+        foss {
+            dimension "distribution"
+            buildConfigField "String", "DISTRIBUTION_FLAVOR", '"foss"'
+        }
+    }
+    buildFeatures {
+        buildConfig true
+    }
+    signingConfigs {
+        release {
+            if (keystorePropertiesFile.exists()) {
+                storeFile file(keystoreProperties['storeFile'])
+                storePassword keystoreProperties['storePassword']
+                keyAlias keystoreProperties['keyAlias']
+                keyPassword keystoreProperties['keyPassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            signingConfig signingConfigs.release
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+        }
+    }
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+// capacitor.build.gradle adds push-notifications to all variants; split per flavor (#114).
+afterEvaluate {
+    configurations.configureEach { config ->
+        config.dependencies.removeAll { dep ->
+            dep instanceof ProjectDependency && dep.name == 'capacitor-push-notifications'
+        }
+    }
+    dependencies {
+        playImplementation project(':capacitor-push-notifications')
+        fossImplementation project(':capacitor-push-notifications-foss')
+    }
+
+    // google-services plugin is play-only; foss variants must not require google-services.json.
+    tasks.matching { it.name ==~ /processFoss.*GoogleServices/ }.configureEach {
+        enabled = false
+    }
+}
+
+def servicesJSON = file('src/play/google-services.json')
+if (servicesJSON.exists()) {
+    apply plugin: 'com.google.gms.google-services'
+} else {
+    logger.info("google-services.json not found in src/play: FCM disabled for play builds")
+}

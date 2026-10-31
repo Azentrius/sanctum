@@ -1,0 +1,141 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-menu
+  menuId="settings-menu"
+  contentId="main-content"
+  side="end"
+  (ionWillOpen)="refreshSecurityStatus()"
+>
+  <ion-header>
+    <ion-toolbar>
+      <ion-title>{{ 'SETTINGS.TITLE' | translate }}</ion-title>
+      <ion-buttons slot="end">
+        <ion-menu-toggle>
+          <ion-button fill="clear">
+            <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+          </ion-button>
+        </ion-menu-toggle>
+      </ion-buttons>
+    </ion-toolbar>
+  </ion-header>
+  <ion-content>
+    <ion-list lines="none">
+      <ion-list-header>
+        <ion-label>{{ 'SETTINGS.SECTION_ACCOUNTS' | translate }}</ion-label>
+      </ion-list-header>
+      <ion-menu-toggle auto-hide="false">
+        <ion-item
+          button
+          routerLink="/tabs/settings/accounts"
+          routerDirection="forward"
+          [appAriaLabel]="'SETTINGS.MANAGE_ACCOUNTS' | translate"
+          appAiHint="Settings menu: open account management"
+        >
+          <ion-icon slot="start" name="people-outline"></ion-icon>
+          <ion-label>{{ 'SETTINGS.MANAGE_ACCOUNTS' | translate }}</ion-label>
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+        <ion-item
+          button
+          routerLink="/tabs/settings/add-account"
+          routerDirection="forward"
+          [appAriaLabel]="'SETTINGS.ADD_ACCOUNT' | translate"
+          appAiHint="Settings menu: add another Nextcloud account"
+        >
+          <ion-icon slot="start" name="add-circle-outline"></ion-icon>
+          <ion-label>{{ 'SETTINGS.ADD_ACCOUNT' | translate }}</ion-label>
+        </ion-item>
+      </ion-menu-toggle>
+
+      <ion-item-divider></ion-item-divider>
+
+      <ion-list-header>
+        <ion-label>{{ 'SETTINGS.SECTION_LANGUAGE' | translate }}</ion-label>
+      </ion-list-header>
+      <ion-menu-toggle auto-hide="false">
+        <ion-item
+          button
+          routerLink="/tabs/settings/language"
+          routerDirection="forward"
+          [appAriaLabel]="'SETTINGS.SECTION_LANGUAGE' | translate"
+          appAiHint="Settings menu: open language selection"
+        >
+          <ion-icon slot="start" name="language-outline"></ion-icon>
+          <ion-label>{{ 'SETTINGS.SECTION_LANGUAGE' | translate }}</ion-label>
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+      </ion-menu-toggle>
+
+      <ion-item-divider></ion-item-divider>
+
+      <ion-list-header>
+        <ion-label>{{ 'SETTINGS.SECTION_APPEARANCE' | translate }}</ion-label>
+      </ion-list-header>
+      <ion-menu-toggle auto-hide="false">
+        <ion-item
+          button
+          routerLink="/tabs/settings/appearance"
+          routerDirection="forward"
+          [appAriaLabel]="'SETTINGS.SECTION_THEME' | translate"
+          appAiHint="Settings menu: open theme and appearance options"
+        >
+          <ion-icon slot="start" name="contrast-outline"></ion-icon>
+          <ion-label>{{ 'SETTINGS.SECTION_THEME' | translate }}</ion-label>
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+      </ion-menu-toggle>
+
+      <ion-item-divider></ion-item-divider>
+
+      <ion-list-header>
+        <ion-label>{{ 'SETTINGS.SECTION_SECURITY' | translate }}</ion-label>
+      </ion-list-header>
+      <ion-menu-toggle auto-hide="false">
+        <ion-item
+          button
+          routerLink="/tabs/settings/security"
+          routerDirection="forward"
+          [appAriaLabel]="'SETTINGS.SECTION_SECURITY' | translate"
+          appAiHint="Settings menu: open security and app lock options"
+        >
+          <ion-icon slot="start" name="shield-checkmark-outline"></ion-icon>
+          <ion-label>{{ 'SETTINGS.SECTION_SECURITY' | translate }}</ion-label>
+          @if (!securityStatusLoading) {
+          <ion-note slot="end" class="settings-active-value">{{ securityStatusKey | translate }}</ion-note>
+          }
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+        <ion-item
+          button
+          routerLink="/tabs/settings/security"
+          routerDirection="forward"
+          [appAriaLabel]="'settings.privacy.preventScreenshots' | translate"
+          appAiHint="Settings menu: open screenshot protection options"
+        >
+          <ion-icon slot="start" name="eye-off-outline"></ion-icon>
+          <ion-label>{{ 'settings.privacy.preventScreenshots' | translate }}</ion-label>
+          @if (!securityStatusLoading) {
+          <ion-note slot="end" class="settings-active-value">{{ privacyStatusKey | translate }}</ion-note>
+          }
+          <ion-icon slot="end" name="chevron-forward-outline"></ion-icon>
+        </ion-item>
+      </ion-menu-toggle>
+
+      <ion-item-divider></ion-item-divider>
+
+      <ion-item lines="none" class="version-item">
+        <ion-label>
+          <p class="version-label">{{ 'SETTINGS.VERSION' | translate }}</p>
+          <p class="version-value">{{ appVersion }} · {{ buildDate }}</p>
+        </ion-label>
+      </ion-item>
+    </ion-list>
+  </ion-content>
+</ion-menu>
+
+<!--
+  Plain router outlet (not ion-tabs): the tab bar was removed in favour of a
+  hub-and-spoke layout, so the modules are pushed forward from Home. ion-tabs
+  without a tab bar keeps no back history, which made the system back gesture
+  bubble past the spoke straight to the lock screen instead of returning Home.
+-->
+<ion-router-outlet id="main-content"></ion-router-outlet>

@@ -1,0 +1,26 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.version-item {
+  --background: transparent;
+  text-align: center;
+  padding-top: 8px;
+
+  .version-label {
+    font-size: 11px;
+    color: var(--ion-color-medium);
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+
+  .version-value {
+    font-family: var(--sanctum-font-mono);
+    font-size: 13px;
+    color: var(--ion-color-medium);
+    margin-top: 2px;
+  }
+}
+
+.settings-active-value {
+  color: var(--ion-color-medium);
+  font-size: 0.85rem;
+  margin-inline-end: 0.25rem;
+}

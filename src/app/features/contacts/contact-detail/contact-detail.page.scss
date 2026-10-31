@@ -1,0 +1,59 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 24px 16px 8px;
+  text-align: center;
+
+  .hero-avatar {
+    width: 96px;
+    height: 96px;
+  }
+
+  .hero-initials {
+    width: 96px;
+    height: 96px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    font-weight: 600;
+    font-size: 2.2rem;
+  }
+
+  h1 {
+    margin: 8px 0 0;
+    font-size: 1.5rem;
+  }
+
+  .org {
+    margin: 0;
+    color: var(--ion-color-medium);
+  }
+
+  .account-chip {
+    margin-top: 8px;
+    color: #fff;
+
+    ion-icon {
+      color: #fff;
+    }
+  }
+}
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 60%;
+  color: var(--ion-color-medium);
+
+  ion-icon {
+    font-size: 48px;
+  }
+}

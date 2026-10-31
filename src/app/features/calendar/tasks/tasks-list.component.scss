@@ -1,0 +1,123 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+:host {
+  display: block;
+  height: 100%;
+}
+
+.tasks-layout {
+  // Definite height for the nested virtual list's percentage height (#114 CI).
+  height: 100%;
+  padding: 0 0 72px;
+}
+
+.task-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 8px 12px;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+
+  ion-chip {
+    border: 1.5px solid;
+    font-size: 0.78rem;
+    height: 28px;
+    --padding-start: 8px;
+    --padding-end: 8px;
+  }
+}
+
+.chip-color-dot {
+  width: 10px;
+  height: 10px;
+  min-width: 10px;
+}
+
+.color-square {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px;
+}
+
+.sync-icon {
+  margin-left: 4px;
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
+.filters-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px;
+  color: var(--ion-color-medium);
+  font-size: 0.8rem;
+
+  ion-spinner {
+    width: 18px;
+    height: 18px;
+    color: var(--ion-color-primary);
+  }
+}
+
+.state-center {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--ion-color-medium);
+
+  .empty-icon {
+    font-size: 48px;
+    margin-bottom: 12px;
+    opacity: 0.5;
+  }
+
+  h2 {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--ion-text-color);
+    margin: 0 0 8px;
+  }
+
+  p {
+    margin: 0;
+    font-size: 0.9rem;
+  }
+}
+
+.group-title {
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  padding: 8px 16px 4px;
+  margin: 0;
+  height: 72px;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+}
+
+.tasks-viewport {
+  width: 100%;
+}
+
+.account-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  margin-inline-start: 4px;
+  flex-shrink: 0;
+}
+
+ion-checkbox {
+  margin-inline-end: 8px;
+}

@@ -1,0 +1,238 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/* ============================================================
+   SANCTUM: Theme tokens
+   "Twilight Sanctuary": deep indigo-violet + honey-gold accent.
+   Drop into src/theme/variables.scss (Ionic 8 / Angular).
+   Light = :root  ·  Dark = .theme-dark + prefers-color-scheme.
+   ============================================================ */
+
+:root {
+  /* ---- Brand: Primary (Sanctum Violet) ---- */
+  --ion-color-primary:            #5346C9;
+  --ion-color-primary-rgb:        83, 70, 201;
+  --ion-color-primary-contrast:   #ffffff;
+  --ion-color-primary-contrast-rgb: 255, 255, 255;
+  --ion-color-primary-shade:      #493DB1;
+  --ion-color-primary-tint:       #6459CF;
+
+  /* ---- Secondary (cooler violet) ---- */
+  --ion-color-secondary:          #6E62E8;
+  --ion-color-secondary-rgb:      110, 98, 232;
+  --ion-color-secondary-contrast: #ffffff;
+  --ion-color-secondary-contrast-rgb: 255, 255, 255;
+  --ion-color-secondary-shade:    #6156CC;
+  --ion-color-secondary-tint:     #7D72EA;
+
+  /* ---- Tertiary (Sanctum Gold: the light within) ---- */
+  --ion-color-tertiary:           #E0A53E;
+  --ion-color-tertiary-rgb:       224, 165, 62;
+  --ion-color-tertiary-contrast:  #2A2150;
+  --ion-color-tertiary-contrast-rgb: 42, 33, 80;
+  --ion-color-tertiary-shade:     #C59137;
+  --ion-color-tertiary-tint:      #E3AE51;
+
+  /* ---- Semantic ---- */
+  --ion-color-success:            #1F9D6B;
+  --ion-color-success-rgb:        31, 157, 107;
+  --ion-color-success-contrast:   #ffffff;
+  --ion-color-success-contrast-rgb: 255, 255, 255;
+  --ion-color-success-shade:      #1B895E;
+  --ion-color-success-tint:       #35A77A;
+
+  --ion-color-warning:            #E08A2E;
+  --ion-color-warning-rgb:        224, 138, 46;
+  --ion-color-warning-contrast:   #2A2150;
+  --ion-color-warning-contrast-rgb: 42, 33, 80;
+  --ion-color-warning-shade:      #C57928;
+  --ion-color-warning-tint:       #E39643;
+
+  --ion-color-danger:             #D6436A;
+  --ion-color-danger-rgb:         214, 67, 106;
+  --ion-color-danger-contrast:    #ffffff;
+  --ion-color-danger-contrast-rgb: 255, 255, 255;
+  --ion-color-danger-shade:       #BC3B5D;
+  --ion-color-danger-tint:        #DA5679;
+
+  /* ---- Neutrals (slate-violet, not flat gray) ---- */
+  --ion-color-dark:               #1C1A2E;
+  --ion-color-dark-rgb:           28, 26, 46;
+  --ion-color-dark-contrast:      #ffffff;
+  --ion-color-dark-contrast-rgb:  255, 255, 255;
+  --ion-color-dark-shade:         #191728;
+  --ion-color-dark-tint:          #333143;
+
+  --ion-color-medium:             #6E6A85;
+  --ion-color-medium-rgb:         110, 106, 133;
+  --ion-color-medium-contrast:    #ffffff;
+  --ion-color-medium-contrast-rgb: 255, 255, 255;
+  --ion-color-medium-shade:       #615D75;
+  --ion-color-medium-tint:        #7D7991;
+
+  --ion-color-light:              #ECEAF6;
+  --ion-color-light-rgb:          236, 234, 246;
+  --ion-color-light-contrast:     #1C1A2E;
+  --ion-color-light-contrast-rgb: 28, 26, 46;
+  --ion-color-light-shade:        #D0CED8;
+  --ion-color-light-tint:         #EFEDF7;
+
+  /* ---- App surfaces & text (Light / "Daylight Sanctum") ---- */
+  --ion-background-color:         #F6F5FB;   /* page */
+  --ion-background-color-rgb:     246, 245, 251;
+  --ion-text-color:               #1C1A2E;
+  --ion-text-color-rgb:           28, 26, 46;
+
+  --ion-card-background:          #FFFFFF;
+  --ion-item-background:          #FFFFFF;
+  --ion-toolbar-background:       #FFFFFF;
+  --ion-tab-bar-background:       #FFFFFF;
+  --ion-border-color:             #E6E3F1;
+
+  /* stepped surfaces (Ionic uses these for tints/dividers) */
+  --ion-color-step-50:   #EEEDF6;
+  --ion-color-step-100:  #E5E3F0;
+  --ion-color-step-150:  #DCDAEB;
+  --ion-color-step-200:  #D2D0E5;
+  --ion-color-step-300:  #BFBCD8;
+  --ion-color-step-400:  #ABA8CB;
+  --ion-color-step-500:  #97949A;
+  --ion-color-step-600:  #6E6A85;
+  --ion-color-step-700:  #514E66;
+  --ion-color-step-800:  #353248;
+  --ion-color-step-850:  #28253A;
+  --ion-color-step-900:  #211E32;
+  --ion-color-step-950:  #1C1A2E;
+}
+
+@mixin sanctum-light {
+  --ion-background-color:         #F6F5FB;
+  --ion-background-color-rgb:     246, 245, 251;
+  --ion-text-color:               #1C1A2E;
+  --ion-text-color-rgb:           28, 26, 46;
+
+  --ion-card-background:          #FFFFFF;
+  --ion-item-background:          #FFFFFF;
+  --ion-toolbar-background:       #FFFFFF;
+  --ion-tab-bar-background:       #FFFFFF;
+  --ion-border-color:             #E6E3F1;
+
+  --ion-color-step-50:   #EEEDF6;
+  --ion-color-step-100:  #E5E3F0;
+  --ion-color-step-150:  #DCDAEB;
+  --ion-color-step-200:  #D2D0E5;
+  --ion-color-step-300:  #BFBCD8;
+  --ion-color-step-400:  #ABA8CB;
+  --ion-color-step-500:  #97949A;
+  --ion-color-step-600:  #6E6A85;
+  --ion-color-step-700:  #514E66;
+  --ion-color-step-800:  #353248;
+  --ion-color-step-850:  #28253A;
+  --ion-color-step-900:  #211E32;
+  --ion-color-step-950:  #1C1A2E;
+}
+
+body.theme-light { @include sanctum-light; }
+
+/* ============================================================
+   DARK: "Midnight Sanctum"
+   Apply via <body class="theme-dark"> for a manual toggle,
+   and automatically when the OS prefers dark.
+   ============================================================ */
+@mixin sanctum-dark {
+  /* In dark mode the primary lifts to a luminous periwinkle and
+     carries DARK text: a deliberate, premium inversion. */
+  --ion-color-primary:            #8B7CF0;
+  --ion-color-primary-rgb:        139, 124, 240;
+  --ion-color-primary-contrast:   #15122E;
+  --ion-color-primary-contrast-rgb: 21, 18, 46;
+  --ion-color-primary-shade:      #7A6DD3;
+  --ion-color-primary-tint:       #9789F2;
+
+  --ion-color-secondary:          #9486F2;
+  --ion-color-secondary-rgb:      148, 134, 242;
+  --ion-color-secondary-contrast: #15122E;
+  --ion-color-secondary-contrast-rgb: 21, 18, 46;
+  --ion-color-secondary-shade:    #8276D5;
+  --ion-color-secondary-tint:     #9F92F3;
+
+  --ion-color-tertiary:           #F0B95A;   /* gold glows on dark */
+  --ion-color-tertiary-rgb:       240, 185, 90;
+  --ion-color-tertiary-contrast:  #2A2150;
+  --ion-color-tertiary-contrast-rgb: 42, 33, 80;
+  --ion-color-tertiary-shade:     #D3A34F;
+  --ion-color-tertiary-tint:      #F2C06B;
+
+  --ion-color-success:            #2FD18F;
+  --ion-color-success-rgb:        47, 209, 143;
+  --ion-color-success-contrast:   #07241A;
+  --ion-color-success-contrast-rgb: 7, 36, 26;
+  --ion-color-success-shade:      #29B87E;
+  --ion-color-success-tint:       #44D69A;
+
+  --ion-color-warning:            #F2A24A;
+  --ion-color-warning-rgb:        242, 162, 74;
+  --ion-color-warning-contrast:   #2A2150;
+  --ion-color-warning-contrast-rgb: 42, 33, 80;
+  --ion-color-warning-shade:      #D58F41;
+  --ion-color-warning-tint:       #F3AB5C;
+
+  --ion-color-danger:             #F2657F;
+  --ion-color-danger-rgb:         242, 101, 127;
+  --ion-color-danger-contrast:    #2A0F18;
+  --ion-color-danger-contrast-rgb: 42, 15, 24;
+  --ion-color-danger-shade:       #D55970;
+  --ion-color-danger-tint:        #F3748C;
+
+  --ion-color-dark:               #ECEAF6;
+  --ion-color-dark-rgb:           236, 234, 246;
+  --ion-color-dark-contrast:      #15122E;
+  --ion-color-dark-contrast-rgb:  21, 18, 46;
+  --ion-color-dark-shade:         #D0CED8;
+  --ion-color-dark-tint:          #EFEDF7;
+
+  --ion-color-medium:             #9D98B8;
+  --ion-color-medium-rgb:         157, 152, 184;
+  --ion-color-medium-contrast:    #15122E;
+  --ion-color-medium-contrast-rgb: 21, 18, 46;
+  --ion-color-medium-shade:       #8A86A2;
+  --ion-color-medium-tint:        #A7A2BF;
+
+  --ion-color-light:              #221E3E;
+  --ion-color-light-rgb:          34, 30, 62;
+  --ion-color-light-contrast:     #ECEAF6;
+  --ion-color-light-contrast-rgb: 236, 234, 246;
+  --ion-color-light-shade:        #1E1A36;
+  --ion-color-light-tint:         #383452;
+
+  /* App surfaces & text (twilight, never pure black) */
+  --ion-background-color:         #0F0D22;
+  --ion-background-color-rgb:     15, 13, 34;
+  --ion-text-color:               #ECEAF6;
+  --ion-text-color-rgb:           236, 234, 246;
+
+  --ion-card-background:          #1A1733;
+  --ion-item-background:          #1A1733;
+  --ion-toolbar-background:       #15122E;
+  --ion-tab-bar-background:       #15122E;
+  --ion-border-color:             #2C2849;
+
+  --ion-color-step-50:   #18152F;
+  --ion-color-step-100:  #211E3C;
+  --ion-color-step-150:  #2A2748;
+  --ion-color-step-200:  #333055;
+  --ion-color-step-300:  #45426E;
+  --ion-color-step-400:  #585487;
+  --ion-color-step-500:  #6B679F;
+  --ion-color-step-600:  #847FB3;
+  --ion-color-step-700:  #9D98C2;
+  --ion-color-step-800:  #C0BCD8;
+  --ion-color-step-850:  #D4D1E6;
+  --ion-color-step-900:  #E2E0EF;
+  --ion-color-step-950:  #ECEAF6;
+}
+
+body.theme-dark { @include sanctum-dark; }
+
+/* Follow the OS automatically, but let users force light with .theme-light */
+@media (prefers-color-scheme: dark) {
+  body:not(.theme-light) { @include sanctum-dark; }
+}

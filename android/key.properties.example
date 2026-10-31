@@ -1,0 +1,6 @@
+# Copy to android/key.properties for local release builds (never commit the real file).
+# The release workflow writes this file from repository secrets.
+storeFile=release.jks
+storePassword=REPLACE
+keyAlias=REPLACE
+keyPassword=REPLACE

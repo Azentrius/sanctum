@@ -1,0 +1,118 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/tasks"></ion-back-button>
+    </ion-buttons>
+    <ion-title>
+      {{ (isEdit ? 'TASK.EDIT_TITLE' : 'TASK.NEW_TITLE') | translate }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button strong="true" [disabled]="form.invalid || !writesEnabled" (click)="save()" (keydown.enter)="save()" (keydown.space)="save(); $event.preventDefault()">
+        {{ 'APP.SAVE' | translate }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="form">
+    <ion-item lines="full">
+      <ion-label position="stacked">{{ 'TASK.FIELD_TITLE' | translate }}</ion-label>
+      <ion-input
+        formControlName="title"
+        [placeholder]="'TASK.FIELD_TITLE_PLACEHOLDER' | translate"
+        autocomplete="off"
+      ></ion-input>
+    </ion-item>
+
+    <ion-item lines="full">
+      <div
+        slot="start"
+        [style.background]="listColor(form.value.listId)"
+        class="list-color-dot"
+      ></div>
+      <ion-select
+        [label]="'TASK.FIELD_LIST' | translate"
+        formControlName="listId"
+        interface="action-sheet"
+      >
+        @for (list of taskLists; track list.id) {
+        <ion-select-option [value]="list.id">{{ list.displayName }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    <ion-item lines="full">
+      <ion-label>{{ 'TASK.FIELD_DUE' | translate }}</ion-label>
+      <ion-datetime-button datetime="dtDue" slot="end"></ion-datetime-button>
+      <ion-modal [keepContentsMounted]="true">
+        <ng-template>
+          <ion-datetime
+            id="dtDue"
+            formControlName="due"
+            presentation="date"
+            [locale]="datetimeLocale"
+            [firstDayOfWeek]="1"
+          ></ion-datetime>
+        </ng-template>
+      </ion-modal>
+    </ion-item>
+
+    <ion-item lines="full">
+      <ion-label>{{ 'TASK.FIELD_COMPLETED' | translate }}</ion-label>
+      <ion-toggle formControlName="completed" slot="end"></ion-toggle>
+    </ion-item>
+
+    <ion-item lines="full">
+      <ion-select
+        [label]="'TASK.FIELD_PRIORITY' | translate"
+        formControlName="priority"
+        interface="action-sheet"
+      >
+        @for (option of priorityOptions; track option.value) {
+        <ion-select-option [value]="option.value">
+          @if (option.labelKey.startsWith('TASK.')) {
+          {{ option.labelKey | translate }}
+          } @else {
+          {{ option.labelKey }}
+          }
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    <ion-item lines="full">
+      <ion-select
+        [label]="'TASK.FIELD_STATUS' | translate"
+        formControlName="status"
+        interface="action-sheet"
+      >
+        @for (option of statusOptions; track option.value) {
+        <ion-select-option [value]="option.value">
+          {{ option.labelKey | translate }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    <ion-item lines="none">
+      <ion-label position="stacked">{{ 'TASK.FIELD_NOTE' | translate }}</ion-label>
+      <ion-textarea
+        formControlName="description"
+        [placeholder]="'TASK.FIELD_NOTE_PLACEHOLDER' | translate"
+        [autoGrow]="true"
+        rows="3"
+      ></ion-textarea>
+    </ion-item>
+  </form>
+
+  @if (isEdit) {
+  <div class="ion-padding-top">
+    <ion-button expand="block" color="danger" fill="outline" [disabled]="!writesEnabled" (click)="delete()" (keydown.enter)="delete()" (keydown.space)="delete(); $event.preventDefault()">
+      <ion-icon slot="start" name="trash-outline"></ion-icon>
+      {{ 'TASK.DELETE_BUTTON' | translate }}
+    </ion-button>
+  </div>
+  }
+</ion-content>

@@ -1,0 +1,17 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+:host {
+  display: block;
+  width: 100%;
+  // Establish a definite height so the consumer's `height` input (percentage /
+  // calc) resolves against a real box; without it the CDK viewport measures 0
+  // and the strategy renders no rows (#114 CI / list virtualization).
+  height: 100%;
+}
+
+.sanctum-virtual-viewport {
+  width: 100%;
+}
+
+.sanctum-virtual-row {
+  box-sizing: border-box;
+}

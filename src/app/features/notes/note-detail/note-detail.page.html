@@ -1,0 +1,49 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button defaultHref="/notes"></ion-back-button>
+    </ion-buttons>
+    @if (note$ | async; as note) {
+    <ion-title>{{ note.title || ('notes.UNTITLED' | translate) }}</ion-title>
+    <ion-buttons slot="end">
+      <ion-button (click)="edit(note)" (keydown.enter)="edit(note)" (keydown.space)="edit(note); $event.preventDefault()" [disabled]="!writesEnabled || note.readonly">
+        {{ 'notes.EDIT' | translate }}
+      </ion-button>
+      <ion-button color="danger" (click)="delete(note)" (keydown.enter)="delete(note)" (keydown.space)="delete(note); $event.preventDefault()" [disabled]="!writesEnabled || note.readonly">
+        {{ 'notes.DELETE_ACTION' | translate }}
+      </ion-button>
+    </ion-buttons>
+    }
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (note$ | async; as note) {
+  <div class="note-detail">
+    <div class="meta">
+      @if (note.category) {
+      <ion-chip>{{ note.category }}</ion-chip>
+      }
+      @if (note.favorite) {
+      <ion-chip color="warning">
+        <ion-icon name="star"></ion-icon>
+        <ion-label>{{ 'notes.FAVORITE' | translate }}</ion-label>
+      </ion-chip>
+      }
+      <p>{{ modified(note) }}</p>
+    </div>
+
+    @if (contentLoading) {
+    <ion-spinner name="crescent"></ion-spinner>
+    } @else {
+    <app-markdown-view [content]="note.content"></app-markdown-view>
+    }
+  </div>
+  } @else {
+  <div class="not-found">
+    <ion-icon name="document-text-outline"></ion-icon>
+    <p>{{ 'notes.NOT_FOUND' | translate }}</p>
+  </div>
+  }
+</ion-content>

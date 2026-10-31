@@ -1,0 +1,105 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'notes.TITLE' | translate" backHref="/tabs/home">
+  <ion-toolbar>
+    <ion-searchbar
+      [value]="searchTerm"
+      [placeholder]="'notes.SEARCH_PLACEHOLDER' | translate"
+      (ionInput)="onSearch($any($event).detail.value)"
+      [debounce]="150"
+    ></ion-searchbar>
+  </ion-toolbar>
+</app-page-header>
+
+<ion-content>
+  <app-offline-banner
+    [visible]="offlineBannerVisible"
+    [message]="offlineBannerMessage"
+  ></app-offline-banner>
+
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($any($event))">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      refreshingSpinner="crescent"
+      [refreshingText]="'COMMON.SYNCING' | translate"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="filter-bar">
+    <ion-segment [value]="selectedCategory" (ionChange)="onCategoryChange($any($event).detail.value)">
+      <ion-segment-button value="">
+        <ion-label>{{ 'notes.ALL_CATEGORIES' | translate }}</ion-label>
+      </ion-segment-button>
+      @for (category of categories; track category) {
+      <ion-segment-button [value]="category">
+        <ion-label>{{ category }}</ion-label>
+      </ion-segment-button>
+      }
+    </ion-segment>
+    <ion-button
+      fill="clear"
+      size="small"
+      [color]="favoritesOnly ? 'warning' : 'medium'"
+      (click)="toggleFavoritesOnly()"
+      (keydown.enter)="toggleFavoritesOnly()"
+      (keydown.space)="toggleFavoritesOnly(); $event.preventDefault()"
+    >
+      <ion-icon slot="start" name="star"></ion-icon>
+      {{ 'notes.FAVORITES_ONLY' | translate }}
+    </ion-button>
+  </div>
+
+  @if (isInitialLoad) {
+  <div class="state-center">
+    <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+  </div>
+  } @else if (notes.length === 0) {
+  <div class="state-center">
+    <ion-icon name="document-text-outline" class="empty-icon"></ion-icon>
+    <h2>{{ 'notes.EMPTY_TITLE' | translate }}</h2>
+    <p>{{ 'notes.EMPTY_HINT' | translate }}</p>
+  </div>
+  } @else {
+  <app-sanctum-virtual-list
+    [items]="notes"
+    [itemSize]="88"
+    [trackBy]="trackByNote"
+    viewportClass="notes-viewport"
+    height="calc(100% - 120px)"
+  >
+    <ng-template #itemTemplate let-note>
+      <ion-item
+        button
+        [routerLink]="['/notes', note.id]"
+        detail="false"
+        class="note-item"
+      >
+        <span class="account-dot" [style.background]="accountColor(note)" slot="start"></span>
+        <ion-label>
+          <h2>
+            @if (note.favorite) {
+            <ion-icon name="star" class="favorite-icon" color="warning"></ion-icon>
+            }
+            {{ note.title || ('notes.UNTITLED' | translate) }}
+          </h2>
+          @if (preview(note); as text) {
+          <p class="preview">{{ text }}</p>
+          }
+          <p class="meta">
+            @if (note.category) {
+            <span>{{ note.category }}</span>
+            <span> · </span>
+            }
+            <span>{{ modified(note) }}</span>
+          </p>
+        </ion-label>
+      </ion-item>
+    </ng-template>
+  </app-sanctum-virtual-list>
+  }
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button routerLink="/notes/new" [disabled]="!writesEnabled">
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

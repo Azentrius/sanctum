@@ -1,0 +1,11 @@
+# Browsers the build targets. Kept in sync with Angular 21's supported set:
+# relative queries always track current versions, so they never fall outside
+# Angular's support window (which pinned old versions like "Safari >=16.1" did).
+# https://angular.dev/reference/versions#browser-support
+
+last 2 Chrome versions
+last 2 Edge versions
+last 2 Firefox versions
+Firefox ESR
+last 2 Safari major versions
+last 2 iOS major versions

@@ -1,0 +1,20 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.account-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: var(--ion-color-primary-contrast);
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.hint p {
+  font-size: 0.8rem;
+  color: var(--ion-color-medium);
+  text-align: center;
+}

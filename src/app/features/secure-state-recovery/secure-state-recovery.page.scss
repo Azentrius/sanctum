@@ -1,0 +1,49 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+.secure-state-recovery-content {
+  --background: var(--ion-background-color);
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100%;
+  padding: 2rem;
+  text-align: center;
+}
+
+h1 {
+  color: var(--ion-text-color);
+  font-size: 1.4rem;
+  font-weight: 600;
+  margin: 1.5rem 0 1rem;
+}
+
+.lead {
+  color: var(--ion-color-medium);
+  font-size: 1rem;
+  margin-bottom: 2rem;
+  max-width: 28rem;
+}
+
+ion-button {
+  width: 100%;
+  max-width: 320px;
+}
+
+.action-error {
+  display: block;
+  margin-top: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.diagnostics {
+  margin-top: 2rem;
+  font-size: 0.85rem;
+  color: var(--ion-color-medium);
+}
+
+.diagnostics p {
+  margin: 0.25rem 0;
+}

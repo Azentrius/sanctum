@@ -1,0 +1,44 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        icon="close-outline"
+        text=""
+        defaultHref="/tabs/home"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'SETTINGS.SECTION_LANGUAGE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <ion-list>
+    <ion-item button (click)="useSystemLanguage()" (keydown.enter)="useSystemLanguage()" (keydown.space)="useSystemLanguage(); $event.preventDefault()" [appAriaLabel]="'SETTINGS.LANGUAGE_SYSTEM' | translate" appAiHint="Use the device system language for the app">
+      <ion-label>
+        <h2>{{ 'SETTINGS.LANGUAGE_SYSTEM' | translate }}</h2>
+        <p>{{ 'SETTINGS.LANGUAGE_SYSTEM_HINT' | translate }}</p>
+      </ion-label>
+      @if (isSystemLanguage) {
+      <ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>
+      }
+    </ion-item>
+
+    <ion-item-divider>
+      <ion-label>{{ 'SETTINGS.LANGUAGE_MANUAL' | translate }}</ion-label>
+    </ion-item-divider>
+
+    @for (lang of languages; track lang) {
+    <ion-item button (click)="selectLanguage(lang.code)" (keydown.enter)="selectLanguage(lang.code)" (keydown.space)="selectLanguage(lang.code); $event.preventDefault()" [appAriaLabel]="lang.nativeLabel" [appAiHint]="'Select app language: ' + lang.nativeLabel">
+      <span slot="start" class="flag">{{ lang.flagEmoji }}</span>
+      <ion-label>
+        <h2>{{ lang.nativeLabel }}</h2>
+        <p>{{ lang.labelKey | translate }}</p>
+      </ion-label>
+      @if (!isSystemLanguage && currentCode === lang.code) {
+      <ion-icon slot="end" name="checkmark-outline" color="primary"></ion-icon>
+      }
+    </ion-item>
+    }
+  </ion-list>
+</ion-content>

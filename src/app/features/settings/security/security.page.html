@@ -1,0 +1,97 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        icon="close-outline"
+        text=""
+        defaultHref="/tabs/home"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'SETTINGS.SECTION_SECURITY' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  @if (loading) {
+  <div class="loading-placeholder" aria-hidden="true">
+    <ion-skeleton-text animated class="skeleton-row"></ion-skeleton-text>
+    <ion-skeleton-text animated class="skeleton-row"></ion-skeleton-text>
+  </div>
+  } @else {
+  <ion-list>
+    <ion-item lines="full">
+      <ion-label>
+        <h2>{{ 'SETTINGS.SECURITY_APP_LOCK' | translate }}</h2>
+        @if (isWeb) {
+        <p>{{ 'SETTINGS.SECURITY_UNAVAILABLE_WEB' | translate }}</p>
+        } @else if (showDevicePinHint) {
+        <p>{{ 'SETTINGS.SECURITY_DEVICE_PIN_HINT' | translate }}</p>
+        }
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="appLockEnabled"
+        [disabled]="isWeb || toggling"
+        (ionChange)="onAppLockToggle($event)"
+        [appAriaLabel]="'SETTINGS.SECURITY_APP_LOCK' | translate"
+        appAiHint="Toggle biometric app lock on or off"
+      ></ion-toggle>
+    </ion-item>
+
+    @if (appLockEnabled) {
+    <ion-item>
+      <ion-select
+        [label]="'SETTINGS.SECURITY_TIMEOUT' | translate"
+        [value]="timeoutMinutes"
+        [disabled]="toggling"
+        interface="popover"
+        (ionChange)="onTimeoutChange($event)"
+        [appAriaLabel]="'SETTINGS.SECURITY_TIMEOUT' | translate"
+        appAiHint="Choose how long the app stays unlocked in the background"
+      >
+        @for (option of timeoutOptions; track option.minutes) {
+        <ion-select-option [value]="option.minutes">
+          {{ option.labelKey | translate }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    }
+
+    <ion-item lines="full">
+      <ion-label>
+        <h2>{{ 'settings.privacy.preventScreenshots' | translate }}</h2>
+        @if (isWeb) {
+        <p>{{ 'settings.privacy.unavailableWeb' | translate }}</p>
+        }
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="preventScreenshotsEnabled"
+        [disabled]="isWeb || toggling"
+        (ionChange)="onPreventScreenshotsToggle($event)"
+        [appAriaLabel]="'settings.privacy.preventScreenshots' | translate"
+        appAiHint="Toggle screenshot and app switcher preview protection"
+      ></ion-toggle>
+    </ion-item>
+
+    @if (showCrashReporting) {
+    <ion-item lines="full">
+      <ion-label>
+        <h2>{{ 'settings.privacy.crashReporting' | translate }}</h2>
+        <p>{{ 'settings.privacy.crashReportingHint' | translate }}</p>
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="crashReportingEnabled"
+        [disabled]="toggling"
+        (ionChange)="onCrashReportingToggle($event)"
+        [appAriaLabel]="'settings.privacy.crashReporting' | translate"
+        appAiHint="Toggle anonymous crash and error reporting to self-hosted GlitchTip"
+      ></ion-toggle>
+    </ion-item>
+    }
+  </ion-list>
+  }
+</ion-content>

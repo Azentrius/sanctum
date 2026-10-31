@@ -1,0 +1,9 @@
+<?xml version='1.0' encoding='utf-8'?>
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<resources>
+    <string name="app_name">Sanctum</string>
+    <string name="title_activity_main">Sanctum</string>
+    <string name="package_name">de.azentrius.sanctum</string>
+    <string name="custom_url_scheme">de.azentrius.sanctum</string>
+    <string name="default_notification_channel_id">sanctum_default</string>
+</resources>

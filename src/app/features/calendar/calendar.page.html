@@ -1,0 +1,85 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<app-page-header [title]="'CALENDAR.TITLE' | translate" backHref="/tabs/home">
+  <ion-toolbar>
+    <ion-button headerActions (click)="goToday()" (keydown.enter)="goToday()" (keydown.space)="goToday(); $event.preventDefault()" [appAriaLabel]="'CALENDAR.TODAY' | translate" appAiHint="Jump the calendar view to today's date">
+      {{ 'CALENDAR.TODAY' | translate }}
+    </ion-button>
+    <ion-segment
+      scrollable
+      [value]="activeView"
+      (ionChange)="switchView($any($event.detail.value))"
+    >
+      @for (v of views; track v.key) {
+      <ion-segment-button [value]="v.key">
+        <ion-label>{{ v.labelKey | translate }}</ion-label>
+      </ion-segment-button>
+      }
+    </ion-segment>
+  </ion-toolbar>
+</app-page-header>
+
+<ion-content [fullscreen]="true" class="calendar-content">
+  <app-offline-banner
+    [visible]="offlineBannerVisible"
+    [message]="offlineBannerMessage"
+  ></app-offline-banner>
+
+  <ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+    <ion-refresher-content
+      pullingIcon="chevron-down-circle-outline"
+      refreshingSpinner="crescent"
+      [refreshingText]="'COMMON.SYNCING' | translate"
+    ></ion-refresher-content>
+  </ion-refresher>
+
+  <div class="calendar-layout">
+    <div class="cal-filters">
+      @if (isInitialLoad && calendars.length === 0) {
+      <div class="filters-loading">
+        <app-sanctum-spinner [loading]="true" [message]="'CALENDAR.SYNCING' | translate"></app-sanctum-spinner>
+      </div>
+      } @else { @for (cal of calendars; track cal.id) {
+      <ion-chip
+        [outline]="!cal.enabled"
+        (click)="toggleCalendar(cal.id)"
+        (keydown.enter)="toggleCalendar(cal.id)"
+        (keydown.space)="toggleCalendar(cal.id); $event.preventDefault()"
+        tabindex="0"
+        [style.--color]="cal.color"
+        [style.--background]="cal.enabled ? cal.color + '22' : 'transparent'"
+        [style.border-color]="cal.color"
+      >
+        <ion-avatar class="chip-color-dot">
+          <div [style.background]="cal.color" class="color-square"></div>
+        </ion-avatar>
+        <ion-label [style.color]="cal.color">{{ cal.displayName }}</ion-label>
+        @if (syncStatusIcon(cal.accountId)) {
+        <span class="sync-icon">{{ syncStatusIcon(cal.accountId) }}</span>
+        }
+      </ion-chip>
+      } }
+    </div>
+
+    <div class="calendar-host">
+      @if (isInitialLoad || eventsLoading) {
+      <div class="calendar-loading-overlay">
+        <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+      </div>
+      }
+      <full-calendar #fullCalendar [options]="calendarOptions"></full-calendar>
+    </div>
+  </div>
+
+  <ion-fab slot="fixed" vertical="bottom" horizontal="end">
+    <ion-fab-button
+      [disabled]="!writesEnabled"
+      (click)="newEvent()"
+      (keydown.enter)="newEvent()"
+      (keydown.space)="newEvent(); $event.preventDefault()"
+      [appAriaLabel]="'CALENDAR.NEW_EVENT' | translate"
+      appAiHint="Open the new-event form for the selected calendar"
+    >
+      <ion-icon name="add"></ion-icon>
+    </ion-fab-button>
+  </ion-fab>
+</ion-content>

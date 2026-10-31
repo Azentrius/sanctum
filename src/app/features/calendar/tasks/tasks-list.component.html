@@ -1,0 +1,111 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-refresher slot="fixed" (ionRefresh)="doRefresh($event)">
+  <ion-refresher-content
+    pullingIcon="chevron-down-circle-outline"
+    refreshingSpinner="crescent"
+    [refreshingText]="'COMMON.SYNCING' | translate"
+  ></ion-refresher-content>
+</ion-refresher>
+
+<app-offline-banner
+  [visible]="offlineBannerVisible"
+  [message]="offlineBannerMessage"
+></app-offline-banner>
+
+<div class="tasks-layout">
+  <div class="task-filters">
+    @if (isInitialLoad && taskLists.length === 0) {
+    <div class="filters-loading">
+      <app-sanctum-spinner [loading]="true" [message]="'TASKS.SYNCING' | translate"></app-sanctum-spinner>
+    </div>
+    } @else {
+    @for (list of taskLists; track list.id) {
+    <ion-chip
+      [outline]="!list.enabled"
+      (click)="toggleList(list.id)"
+      (keydown.enter)="toggleList(list.id)"
+      (keydown.space)="toggleList(list.id); $event.preventDefault()"
+      tabindex="0"
+      role="button"
+      [style.--color]="list.color"
+      [style.--background]="list.enabled ? list.color + '22' : 'transparent'"
+      [style.border-color]="list.color"
+    >
+      <ion-avatar class="chip-color-dot">
+        <div [style.background]="list.color" class="color-square"></div>
+      </ion-avatar>
+      <ion-label [style.color]="list.color">{{ list.displayName }}</ion-label>
+      @if (syncStatusIcon(list.accountId)) {
+      <span class="sync-icon">{{ syncStatusIcon(list.accountId) }}</span>
+      }
+    </ion-chip>
+    }
+    }
+  </div>
+
+  @if (isInitialLoad) {
+  <div class="state-center">
+    <app-sanctum-spinner [loading]="true"></app-sanctum-spinner>
+  </div>
+  } @else if (!hasAnyTasks) {
+  <div class="state-center">
+    <ion-icon name="checkbox-outline" class="empty-icon"></ion-icon>
+    <h2>{{ 'TASKS.EMPTY_TITLE' | translate }}</h2>
+    <p>{{ 'TASKS.EMPTY_HINT' | translate }}</p>
+  </div>
+  } @else {
+  <app-sanctum-virtual-list
+    [items]="rows"
+    [itemSize]="72"
+    [trackBy]="trackByRow"
+    viewportClass="tasks-viewport"
+    height="calc(100% - 120px)"
+  >
+    <ng-template #itemTemplate let-row>
+      @if (row.kind === 'header') {
+      <h3 class="group-title" [style.color]="row.list.color">
+        {{ row.list.displayName }}
+      </h3>
+      } @else {
+      <ion-item
+        button
+        (click)="openTask(row.item.task)"
+        (keydown.enter)="openTask(row.item.task)"
+        (keydown.space)="openTask(row.item.task); $event.preventDefault()"
+        detail="false"
+        [style.--padding-start.px]="16 + row.item.depth * 20"
+      >
+        <ion-checkbox
+          slot="start"
+          [checked]="row.item.task.completed"
+          (ionChange)="toggleComplete(row.item.task, $event)"
+        ></ion-checkbox>
+        <span
+          class="account-dot"
+          slot="start"
+          [style.background]="accountColor(row.item.task.accountId)"
+        ></span>
+        <ion-label>
+          <h2>{{ row.item.task.title }}</h2>
+          @if (row.item.task.due) {
+          <p>{{ formatDue(row.item.task) }}</p>
+          }
+        </ion-label>
+      </ion-item>
+      }
+    </ng-template>
+  </app-sanctum-virtual-list>
+  }
+</div>
+
+<ion-fab slot="fixed" vertical="bottom" horizontal="end">
+  <ion-fab-button
+    [disabled]="!writesEnabled"
+    (click)="newTask()"
+    (keydown.enter)="newTask()"
+    (keydown.space)="newTask(); $event.preventDefault()"
+    [appAriaLabel]="'TASKS.NEW' | translate"
+  >
+    <ion-icon name="add"></ion-icon>
+  </ion-fab-button>
+</ion-fab>

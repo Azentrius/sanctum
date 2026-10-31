@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "actorId": "alice",
+    "actorDisplayName": "Alice",
+    "message": "Hello!",
+    "timestamp": 1718207000,
+    "messageType": "comment"
+  },
+  {
+    "id": 2,
+    "actorType": "guests",
+    "actorDisplayName": "System",
+    "message": "{user} joined the conversation",
+    "timestamp": 1718207100,
+    "messageType": "system"
+  }
+]

@@ -1,0 +1,16 @@
+Sanctum
+Copyright 2026 Stefan Popp
+Licensed under the GNU General Public License, version 3 or (at your option) any later
+version. See LICENSE.
+
+Not covered by the GNU General Public License: the Sanctum app icon, logo and start screen
+images and the Azentrius name and word mark. These are:
+  assets/*.png
+  src/assets/branding/*.svg, src/assets/icon/favicon.png, src/assets/icons/icon-*.webp
+  android/app/src/main/res/mipmap-*/ic_launcher*, android/app/src/main/res/drawable*/splash.png,
+  android/app/src/main/res/drawable-*/ic_stat_sanctum.png
+  ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png, ios/App/App/Assets.xcassets/Splash.imageset/*.png
+  Copyright (c) 2026 Stefan Popp. All rights reserved.
+
+Third-party packages that the app is built from keep their own licenses; they are listed with
+their license texts in package-lock.json and the build files under android/.

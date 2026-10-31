@@ -1,0 +1,206 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-button (click)="tryLeave()" (keydown.enter)="tryLeave()" (keydown.space)="tryLeave(); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="arrow-back-outline"></ion-icon>
+      </ion-button>
+    </ion-buttons>
+    <ion-title>
+      {{ (isEdit ? 'CONTACT.EDIT_TITLE' : 'CONTACT.NEW_TITLE') | translate }}
+    </ion-title>
+    <ion-buttons slot="end">
+      <ion-button strong="true" [disabled]="nameMissing || form.invalid || !writesEnabled" (click)="save()" (keydown.enter)="save()" (keydown.space)="save(); $event.preventDefault()">
+        {{ 'APP.SAVE' | translate }}
+      </ion-button>
+    </ion-buttons>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content class="ion-padding">
+  <form [formGroup]="form">
+    <!-- Name + organisation -->
+    <ion-item lines="full">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_FIRST_NAME' | translate }}"
+        labelPlacement="stacked"
+        formControlName="firstName"
+      ></ion-input>
+    </ion-item>
+    <ion-item lines="full">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_LAST_NAME' | translate }}"
+        labelPlacement="stacked"
+        formControlName="lastName"
+      ></ion-input>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_ORGANIZATION' | translate }}"
+        labelPlacement="stacked"
+        formControlName="organization"
+      ></ion-input>
+    </ion-item>
+
+    <!-- Phones -->
+    <div class="section-head">
+      <span>{{ 'CONTACT.PHONES' | translate }}</span>
+      <ion-button fill="clear" size="small" (click)="addPhone()" (keydown.enter)="addPhone()" (keydown.space)="addPhone(); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+      </ion-button>
+    </div>
+    <div formArrayName="phones">
+      @for (phone of phones.controls; track $index) {
+      <ion-item [formGroupName]="$index" lines="full">
+        <ion-select
+          formControlName="type"
+          interface="popover"
+          slot="start"
+          class="type-select"
+        >
+          @for (type of fieldTypes; track type) {
+          <ion-select-option [value]="type">
+            {{ ('CONTACT.TYPE_' + type.toUpperCase()) | translate }}
+          </ion-select-option>
+          }
+        </ion-select>
+        <ion-input
+          type="tel"
+          formControlName="value"
+          [placeholder]="'CONTACT.PHONE_PLACEHOLDER' | translate"
+        ></ion-input>
+        <ion-button fill="clear" color="medium" slot="end" (click)="removePhone($index)" (keydown.enter)="removePhone($index)" (keydown.space)="removePhone($index); $event.preventDefault()">
+          <ion-icon slot="icon-only" name="remove-circle-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+      }
+    </div>
+
+    <!-- Emails -->
+    <div class="section-head">
+      <span>{{ 'CONTACT.EMAILS' | translate }}</span>
+      <ion-button fill="clear" size="small" (click)="addEmail()" (keydown.enter)="addEmail()" (keydown.space)="addEmail(); $event.preventDefault()">
+        <ion-icon slot="icon-only" name="add-circle-outline"></ion-icon>
+      </ion-button>
+    </div>
+    <div formArrayName="emails">
+      @for (email of emails.controls; track $index) {
+      <ion-item [formGroupName]="$index" lines="full">
+        <ion-select
+          formControlName="type"
+          interface="popover"
+          slot="start"
+          class="type-select"
+        >
+          @for (type of fieldTypes; track type) {
+          <ion-select-option [value]="type">
+            {{ ('CONTACT.TYPE_' + type.toUpperCase()) | translate }}
+          </ion-select-option>
+          }
+        </ion-select>
+        <ion-input
+          type="email"
+          formControlName="value"
+          [placeholder]="'CONTACT.EMAIL_PLACEHOLDER' | translate"
+        ></ion-input>
+        <ion-button fill="clear" color="medium" slot="end" (click)="removeEmail($index)" (keydown.enter)="removeEmail($index)" (keydown.space)="removeEmail($index); $event.preventDefault()">
+          <ion-icon slot="icon-only" name="remove-circle-outline"></ion-icon>
+        </ion-button>
+      </ion-item>
+      }
+    </div>
+
+    <!-- Address -->
+    <div class="section-head">
+      <span>{{ 'CONTACT.ADDRESS' | translate }}</span>
+    </div>
+    <ion-item lines="full">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_STREET' | translate }}"
+        labelPlacement="stacked"
+        formControlName="street"
+      ></ion-input>
+    </ion-item>
+    <ion-item lines="full">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_POSTAL_CODE' | translate }}"
+        labelPlacement="stacked"
+        formControlName="postalCode"
+      ></ion-input>
+    </ion-item>
+    <ion-item lines="full">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_CITY' | translate }}"
+        labelPlacement="stacked"
+        formControlName="city"
+      ></ion-input>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-input
+        label="{{ 'CONTACT.FIELD_COUNTRY' | translate }}"
+        labelPlacement="stacked"
+        formControlName="country"
+      ></ion-input>
+    </ion-item>
+
+    <!-- Birthday + notes -->
+    <div class="section-gap"></div>
+    <ion-item lines="full">
+      <ion-label>{{ 'CONTACT.BIRTHDAY' | translate }}</ion-label>
+      <ion-datetime-button datetime="birthday" slot="end"></ion-datetime-button>
+      <ion-modal [keepContentsMounted]="true">
+        <ng-template>
+          <ion-datetime
+            id="birthday"
+            presentation="date"
+            formControlName="birthday"
+            [showDefaultButtons]="true"
+          ></ion-datetime>
+        </ng-template>
+      </ion-modal>
+    </ion-item>
+    <ion-item lines="none">
+      <ion-textarea
+        label="{{ 'CONTACT.NOTES' | translate }}"
+        labelPlacement="stacked"
+        formControlName="notes"
+        [autoGrow]="true"
+        rows="2"
+      ></ion-textarea>
+    </ion-item>
+
+    <!-- Account + address book picker (new contacts, multi-account) -->
+    @if (!isEdit) {
+    <div class="section-gap"></div>
+    @if (activeAccounts.length > 1) {
+    <ion-item lines="full">
+      <ion-select
+        label="{{ 'CONTACT.ACCOUNT' | translate }}"
+        labelPlacement="stacked"
+        formControlName="accountId"
+        interface="action-sheet"
+        (ionChange)="onAccountChange()"
+      >
+        @for (account of activeAccounts; track account.id) {
+        <ion-select-option [value]="account.id">
+          {{ account.displayName || account.username }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    }
+    <ion-item lines="none">
+      <ion-select
+        label="{{ 'CONTACT.ADDRESS_BOOK' | translate }}"
+        labelPlacement="stacked"
+        formControlName="addressBookId"
+        interface="action-sheet"
+      >
+        @for (book of addressBooksForSelectedAccount(); track book.id) {
+        <ion-select-option [value]="book.id">{{ book.displayName }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    }
+  </form>
+</ion-content>

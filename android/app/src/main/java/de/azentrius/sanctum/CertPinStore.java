@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 package de.azentrius.sanctum;
 
+import android.content.Context;
 import android.util.Base64;
 
 import com.getcapacitor.JSArray;
@@ -18,12 +19,16 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 
+import de.azentrius.sanctum.sync.PinPersistence;
+
 import okhttp3.CertificatePinner;
 import okhttp3.OkHttpClient;
 
 /**
- * In-memory TOFU certificate pins keyed by host. When no pin is stored for a
- * host, OkHttp falls back to the system trust store (standard TLS).
+ * TOFU certificate pins keyed by host. When no pin is stored for a host, OkHttp
+ * falls back to the system trust store (standard TLS). The app sends the pins;
+ * once {@link #attach(Context)} ran they are also kept on disk, so a background
+ * sync without the WebView pins the same keys.
  */
 public final class CertPinStore {
 
@@ -33,15 +38,34 @@ public final class CertPinStore {
 
     private final Map<String, Set<String>> pinsByHost = new ConcurrentHashMap<>();
 
+    private Context appContext;
+
     private CertPinStore() {}
 
     public static CertPinStore getInstance() {
         return INSTANCE;
     }
 
+    /**
+     * Gives the store a context to keep pins on disk, and loads the kept pins if
+     * the app has not sent any in this process yet. Safe to call more than once.
+     */
+    public synchronized void attach(Context context) {
+        if (appContext != null) {
+            return;
+        }
+        appContext = context.getApplicationContext();
+        if (pinsByHost.isEmpty()) {
+            pinsByHost.putAll(PinPersistence.load(appContext));
+        }
+    }
+
     public synchronized void syncPins(JSArray pins) {
         pinsByHost.clear();
         if (pins == null) {
+            if (appContext != null) {
+                PinPersistence.save(appContext, pinsByHost);
+            }
             return;
         }
         for (int i = 0; i < pins.length(); i++) {
@@ -64,6 +88,9 @@ public final class CertPinStore {
             if (!hostPins.isEmpty()) {
                 pinsByHost.put(host, Collections.unmodifiableSet(hostPins));
             }
+        }
+        if (appContext != null) {
+            PinPersistence.save(appContext, pinsByHost);
         }
     }
 

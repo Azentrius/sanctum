@@ -1,0 +1,72 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+// Build file for the synctools copy from DAVx5 (see README.md). The sources are upstream's, with
+// one local change; this file replaces upstream's Gradle setup, which depends on DAVx5's build logic.
+
+apply plugin: 'com.android.library'
+apply plugin: 'kotlin-android'
+
+ext {
+    ical4jVersion = '4.4.0'
+}
+
+android {
+    namespace = 'at.bitfire.synctools'
+    compileSdk = rootProject.ext.compileSdkVersion
+
+    defaultConfig {
+        minSdkVersion rootProject.ext.minSdkVersion
+        buildConfigField 'String', 'version_ical4j', "\"${ical4jVersion}\""
+        consumerProguardFiles 'consumer-rules.pro'
+    }
+
+    buildFeatures {
+        buildConfig true
+    }
+
+    sourceSets {
+        main {
+            java.srcDirs += 'opentasks-contract/src/main/java'
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_21
+        targetCompatibility JavaVersion.VERSION_21
+        coreLibraryDesugaringEnabled true
+    }
+
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/*.md', 'LICENSE',
+                         'META-INF/LICENSE.txt', 'META-INF/NOTICE.txt']
+        }
+    }
+
+    lint {
+        disable 'AllowBackup', 'InvalidPackage'
+    }
+}
+
+kotlin {
+    jvmToolchain(21)
+}
+
+dependencies {
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
+
+    implementation "androidx.annotation:annotation:1.9.1"
+    implementation "androidx.core:core-ktx:$androidxCoreVersion"
+    implementation 'com.google.guava:guava:33.7.2-android'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.11.0'
+
+    // ical4j and ez-vcard
+    api "org.mnode.ical4j:ical4j:${ical4jVersion}"
+    implementation 'org.slf4j:slf4j-jdk14:2.0.20'
+    api 'com.googlecode.ez-vcard:ez-vcard:0.12.2'
+
+    compileOnly 'com.github.spotbugs:spotbugs-annotations:4.10.5'
+
+    // Versions upstream pins for its minSdk (ical4j needs Apache Commons)
+    implementation('commons-codec:commons-codec') { version { strictly '1.17.1' } }
+    implementation('org.apache.commons:commons-lang3') { version { strictly '3.15.0' } }
+}

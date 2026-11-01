@@ -8,6 +8,8 @@
         <exclude domain="database" path="ionic_storage.db" />
         <exclude domain="database" path="sanctum_cache" />
         <exclude domain="database" path="sanctum_cacheSQLite.db" />
+        <exclude domain="sharedpref" path="sanctum_sync_credentials.xml" />
+        <exclude domain="sharedpref" path="sanctum_cert_pins.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="CapacitorStorage.xml" />
@@ -16,5 +18,7 @@
         <exclude domain="database" path="ionic_storage.db" />
         <exclude domain="database" path="sanctum_cache" />
         <exclude domain="database" path="sanctum_cacheSQLite.db" />
+        <exclude domain="sharedpref" path="sanctum_sync_credentials.xml" />
+        <exclude domain="sharedpref" path="sanctum_cert_pins.xml" />
     </device-transfer>
 </data-extraction-rules>

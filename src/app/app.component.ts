@@ -9,6 +9,7 @@ import { isHardwareBackExitRoute, shouldNavigateToAppLock } from './app.helpers'
 import { BiometricService } from './core/auth/biometric.service';
 import { BackgroundSyncService } from './core/dav/background-sync.service';
 import { APP_MODULES } from './core/modules/app-modules';
+import { NativeSyncAccountsService } from './core/native-sync/native-sync-accounts.service';
 import { StorageUnavailableService } from './core/storage/storage-unavailable.service';
 import { CertPinMismatchService } from './core/security/cert-pin-mismatch.service';
 import { SecureStateRecoveryService } from './core/security/secure-state-recovery.service';
@@ -41,6 +42,7 @@ export class AppComponent implements OnInit {
   private readonly certPinMismatch = inject(CertPinMismatchService);
   private readonly secureStateRecovery = inject(SecureStateRecoveryService);
   private readonly modules = inject(APP_MODULES);
+  private readonly nativeSync = inject(NativeSyncAccountsService);
 
   ngOnInit(): void {
     void this.init();
@@ -66,6 +68,7 @@ export class AppComponent implements OnInit {
     }
 
     this.backgroundSync.init();
+    void this.nativeSync.reconcile();
 
     // Push serves Talk only; while Talk is hidden the app neither registers for push nor
     // opens Talk links.
@@ -115,6 +118,8 @@ export class AppComponent implements OnInit {
     const locked = await firstValueFrom(this.biometricService.isLocked.pipe(take(1)));
 
     if (!shouldNavigateToAppLock(this.router.url, locked, lockEnabled)) {
+      // Unlocked: app passwords are readable again, so accounts missing natively can be caught up.
+      void this.nativeSync.reconcile();
       return;
     }
 

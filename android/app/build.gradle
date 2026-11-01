@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 apply plugin: 'com.android.application'
+apply plugin: 'kotlin-android'
 
 // The version lives only in package.json; versionCode = major * 10000 + minor * 100 + patch
 // (scripts/lib/android-version-code.js uses the same formula).
@@ -41,6 +42,17 @@ android {
     buildFeatures {
         buildConfig true
     }
+    compileOptions {
+        // synctools and ical4j use Java APIs that need desugaring below their target level
+        coreLibraryDesugaringEnabled true
+    }
+    packagingOptions {
+        resources {
+            excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/*.md', 'LICENSE',
+                         'META-INF/LICENSE.txt', 'META-INF/NOTICE.txt', 'META-INF/INDEX.LIST',
+                         'META-INF/io.netty.versions.properties']
+        }
+    }
     signingConfigs {
         release {
             if (keystorePropertiesFile.exists()) {
@@ -60,6 +72,10 @@ android {
     }
 }
 
+kotlin {
+    jvmToolchain(21)
+}
+
 repositories {
     flatDir{
         dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
@@ -72,7 +88,27 @@ dependencies {
     implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
     implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
     implementation project(':capacitor-android')
-    implementation "com.squareup.okhttp3:okhttp:4.12.0"
+    // OkHttp 5.5, which Ktor 3.6 asks for, needs compileSdk 37; 5.3.2 is what Ktor 3.4 and 3.5
+    // use. Raise it together with compileSdk.
+    implementation('com.squareup.okhttp3:okhttp') {
+        version { strictly '5.3.2' }
+    }
+    constraints {
+        implementation('com.squareup.okhttp3:okhttp-android') {
+            version { strictly '5.3.2' }
+        }
+    }
+
+    // Native calendar sync (docs/native-sync.md)
+    coreLibraryDesugaring 'com.android.tools:desugar_jdk_libs_nio:2.1.5'
+    implementation project(':synctools')
+    implementation('com.github.bitfireAT:dav4jvm:5.0.0') {
+        // Android brings its own XmlPullParser
+        exclude group: 'org.ogce', module: 'xpp3'
+    }
+    implementation 'io.ktor:ktor-client-okhttp:3.6.0'
+    implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0'
+    implementation 'androidx.work:work-runtime-ktx:2.11.2'
     testImplementation "junit:junit:$junitVersion"
     androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
     androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"

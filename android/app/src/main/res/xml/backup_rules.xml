@@ -7,4 +7,7 @@
     <!-- Ionic Storage SQLite DB -->
     <exclude domain="database" path="ionic_storage" />
     <exclude domain="database" path="ionic_storage.db" />
+    <!-- Native sync: credentials under a Keystore key that a restore cannot bring along, and pins -->
+    <exclude domain="sharedpref" path="sanctum_sync_credentials.xml" />
+    <exclude domain="sharedpref" path="sanctum_cert_pins.xml" />
 </full-backup-content>

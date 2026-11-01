@@ -17,6 +17,7 @@ import { trimTrailingSlashes } from '../string/string.util';
 import { NextcloudAccount } from '../accounts/account.model';
 import { AccountService } from '../accounts/account.service';
 import { DavClientService } from '../dav/dav-client.service';
+import { NativeSyncAccountsService } from '../native-sync/native-sync-accounts.service';
 import { AppPasswordRevocationService } from './app-password-revocation.service';
 import { PushService } from '../push/push.service';
 import { assertLoginFlowOrigins } from './auth-url.util';
@@ -42,6 +43,7 @@ export class AuthService {
   private readonly tokenService = inject(TokenService);
   private readonly certPinService = inject(CertPinService);
   private readonly pushService = inject(PushService);
+  private readonly nativeSync = inject(NativeSyncAccountsService);
   private readonly router = inject(Router);
   // Resolved lazily: DavClientService and AppPasswordRevocationService depend on services that
   // depend on AuthService, so injecting them as fields would be a DI cycle.
@@ -165,6 +167,7 @@ export class AuthService {
 
     await this.tokenService.setPassword(account.id, credentials.appPassword);
     await this.certPinService.establishTofuPin(account.id, serverUrl);
+    await this.nativeSync.register(account, credentials.appPassword);
     void this.pushService.registerForAllAccounts();
   }
 
@@ -183,6 +186,7 @@ export class AuthService {
     await this.tokenService.setPassword(account.id, appPassword);
     this.injector.get(DavClientService).invalidateClient(account.id);
     await this.accountService.updateAccount(account.id, { needsReauth: false });
+    await this.nativeSync.register(account, appPassword);
   }
 
   private pollForCredentials(

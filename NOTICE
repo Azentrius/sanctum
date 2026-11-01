@@ -20,5 +20,10 @@ DM Sans (src/assets/fonts/DMSans-VF.woff2)
   Copyright 2014 The DM Sans Project Authors (https://github.com/googlefonts/dm-fonts)
   SIL Open Font License 1.1, see src/assets/fonts/OFL-DM-Sans.txt
 
+synctools (android/synctools/), from DAVx5 (https://github.com/bitfireAT/davx5-ose)
+  Copyright the DAVx5 contributors, see android/synctools/AUTHORS
+  GNU General Public License version 3, see android/synctools/LICENSE;
+  origin and local changes in android/synctools/README.md
+
 Third-party packages that the app is built from keep their own licenses; they are listed with
 their license texts in package-lock.json and the build files under android/.

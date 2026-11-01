@@ -1,5 +1,6 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Dependabot version updates for the npm packages, the Android build and the GitHub Actions in .github/workflows.
+# The groups take minor and patch updates; each major update comes as its own pull request.
 version: 2
 updates:
   - package-ecosystem: "npm"
@@ -13,6 +14,9 @@ updates:
       npm:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
@@ -24,6 +28,18 @@ updates:
       gradle:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # Held with AGP 8.13, which cannot load Gradle 9.
+      - dependency-name: "gradle-wrapper"
+        update-types:
+          - "version-update:semver-major"
+      # AGP is held at 8.13 on purpose; AGP 9 is a migration of its own.
+      - dependency-name: "com.android.tools.build:gradle"
+        update-types:
+          - "version-update:semver-major"
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
@@ -35,3 +51,6 @@ updates:
       github-actions:
         patterns:
           - "*"
+        update-types:
+          - "minor"
+          - "patch"

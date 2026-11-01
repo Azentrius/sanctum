@@ -9,6 +9,7 @@ import { AccountService } from '../accounts/account.service';
 import { AddressBookService } from '../carddav/addressbook.service';
 import { ContactService } from '../carddav/contact.service';
 import { APP_MODULES } from '../modules/app-modules';
+import { NativeSyncAccountsService } from '../native-sync/native-sync-accounts.service';
 import { NotificationService } from '../notifications/notification.service';
 import { LocalDbService } from '../storage/local-db.service';
 import { CalendarService } from './calendar.service';
@@ -46,6 +47,11 @@ export class SyncService {
   private readonly localDb = inject(LocalDbService);
   private readonly toastController = inject(ToastController);
   private readonly modules = inject(APP_MODULES);
+  /**
+   * On Android the native sync keeps the calendars, and the calendar screens read the Android
+   * calendar; this service leaves them alone there, and the phone's calendar app reminds.
+   */
+  private readonly nativeCalendars = inject(NativeSyncAccountsService).isAvailable();
 
   private readonly syncStatuses$ = new BehaviorSubject<Map<string, SyncStatus>>(new Map());
   private calendarSyncInFlight: Promise<void> | null = null;
@@ -82,8 +88,11 @@ export class SyncService {
     return this.allSyncInFlight;
   }
 
-  /** CalDAV only: calendars and events. */
+  /** CalDAV only: calendars and events. Nothing to do on Android (see {@link nativeCalendars}). */
   async syncCalendar(options: SyncOptions = {}): Promise<void> {
+    if (this.nativeCalendars) {
+      return;
+    }
     if (this.calendarSyncInFlight) {
       return this.calendarSyncInFlight;
     }
@@ -123,9 +132,11 @@ export class SyncService {
    */
   async syncAccount(accountId: string): Promise<void> {
     try {
-      await this.syncCalendarForAccount(accountId, defaultFullEventRange(), {
-        force: true,
-      });
+      if (!this.nativeCalendars) {
+        await this.syncCalendarForAccount(accountId, defaultFullEventRange(), {
+          force: true,
+        });
+      }
       await this.syncTasksForAccount(accountId, { force: true });
       await this.syncContactsForAccount(accountId, { force: true });
       await this.localDb.saveLastSync(accountId, new Date());
@@ -151,7 +162,8 @@ export class SyncService {
     const results = await Promise.all(
       accounts.map(async (account) => {
         const needsCalendar =
-          options.force || (await this.isCalendarSyncStale(account.id));
+          !this.nativeCalendars &&
+          (options.force || (await this.isCalendarSyncStale(account.id)));
         const needsContacts =
           this.modules.contacts &&
           (options.force || (await this.isContactsSyncStale(account.id)));
@@ -390,7 +402,9 @@ export class SyncService {
   private async refreshNotifications(): Promise<void> {
     try {
       const [events, contacts] = await Promise.all([
-        firstValueFrom(this.eventService.allEvents.pipe(take(1))),
+        this.nativeCalendars
+          ? Promise.resolve([])
+          : firstValueFrom(this.eventService.allEvents.pipe(take(1))),
         this.modules.contacts
           ? firstValueFrom(this.contactService.allContacts.pipe(take(1)))
           : Promise.resolve([]),

@@ -33,33 +33,27 @@ export class NativeCalendarSyncService {
     return SanctumSync.getSyncOverview();
   }
 
-  /** Asks for calendar access if needed; true when it is granted. */
+  /**
+   * Asks for calendar access if needed; true when it is granted. Access granted just now starts
+   * the sync of every account, which had to wait for it.
+   */
   async ensurePermission(): Promise<boolean> {
     const current = await SanctumSync.checkPermissions();
     if (current.calendar === 'granted') {
       return true;
     }
     const requested = await SanctumSync.requestPermissions({ permissions: ['calendar'] });
-    return requested.calendar === 'granted';
-  }
-
-  /**
-   * Switches the sync of an account; switching on asks for calendar access first. Switching off
-   * fails while changes are not uploaded yet (see {@link isPendingChangesError}), unless
-   * `discardChanges` is true.
-   */
-  async setAccountSync(accountId: string, enabled: boolean, discardChanges = false): Promise<boolean> {
-    if (enabled && !(await this.ensurePermission())) {
+    if (requested.calendar !== 'granted') {
       return false;
     }
-    await SanctumSync.setAccountSync({
-      accountId,
-      enabled,
-      ...(discardChanges ? { discardChanges } : {}),
-    });
+    await SanctumSync.syncAll();
     return true;
   }
 
+  /**
+   * Switches one calendar. Switching off fails while changes are not uploaded yet (see
+   * {@link isPendingChangesError}), unless `discardChanges` is true.
+   */
   setCalendarSync(
     accountId: string,
     calendarId: number,

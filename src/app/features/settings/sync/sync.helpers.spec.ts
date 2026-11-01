@@ -9,7 +9,6 @@ import { conflictCount, intervalLabelKey, syncStatusKey } from './sync.helpers';
 const account = (overrides: Partial<NativeSyncAccountState> = {}): NativeSyncAccountState => ({
   accountId: 'a',
   name: 'alice@cloud.example.com',
-  enabled: true,
   running: false,
   calendars: [],
   ...overrides,

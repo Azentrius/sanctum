@@ -8,19 +8,29 @@ import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 import { firstValueFrom, take } from 'rxjs';
 
 import { AccountCalendar, CalendarEvent } from '../../../core/accounts/account.model';
-import { CalendarService } from '../../../core/caldav/calendar.service';
-import { EventService } from '../../../core/caldav/event.service';
 import type { EventWriteOptions } from '../../../core/caldav/event.service';
+import { CALENDAR_SOURCE, EventDraft } from '../../../core/calendar-source/calendar-source';
 import { ConnectivityService } from '../../../core/connectivity/connectivity.service';
 import { isOfflineWriteBlockedError } from '../../../core/connectivity/offline-write-blocked.error';
 import { TranslationService } from '../../../core/i18n/translation.service';
 import { toLocalDateTimeString } from '../../../utils/timezone.util';
 import { AriaLabelDirective } from '../../../shared/directives/aria-label.directive';
 import {
+  allDayEnd,
   isSeriesOccurrence,
   resolveRecurrenceId,
   type SeriesEditScope,
 } from '../series-scope.util';
+
+interface EventFormValue {
+  title: string;
+  start: string;
+  end: string;
+  allDay: boolean;
+  calendarId: string;
+  description: string;
+  tzid: string;
+}
 
 /**
  * Routed create/edit screen for calendar events: the page replacement for the
@@ -38,8 +48,7 @@ import {
   private readonly fb = inject(FormBuilder);
   private readonly route = inject(ActivatedRoute);
   private readonly navController = inject(NavController);
-  private readonly calendarService = inject(CalendarService);
-  private readonly eventService = inject(EventService);
+  private readonly source = inject(CALENDAR_SOURCE);
   private readonly translationService = inject(TranslationService);
   private readonly translate = inject(TranslateService);
   private readonly toastController = inject(ToastController);
@@ -49,9 +58,11 @@ import {
   form!: FormGroup;
   isEdit = false;
   calendars: AccountCalendar[] = [];
+  /** The edited event is in a calendar the user may only read. */
+  readOnly = false;
 
   get writesEnabled(): boolean {
-    return this.connectivity.isOnline();
+    return (!this.source.writesNeedNetwork || this.connectivity.isOnline()) && !this.readOnly;
   }
 
   private event: CalendarEvent | null = null;
@@ -88,12 +99,28 @@ import {
   }
 
   private async loadData(id: string | null): Promise<void> {
-    this.calendars = await firstValueFrom(
-      this.calendarService.enabledCalendars.pipe(take(1)),
-    );
+    let calendars = await firstValueFrom(this.source.calendars.pipe(take(1)));
+    if (calendars.length === 0) {
+      // Opened without the calendar screen before it (a link)
+      await this.source.open();
+      calendars = await firstValueFrom(this.source.calendars.pipe(take(1)));
+    }
 
     if (id) {
-      this.event = await this.eventService.getById(id);
+      this.event = await this.source.getEvent(id);
+    }
+
+    // New events go to writable calendars; an existing one stays in its calendar
+    const eventCalendarId = this.event?.calendarId;
+    this.calendars = calendars.filter(
+      (calendar) =>
+        calendar.id === eventCalendarId || (calendar.enabled && !calendar.readOnly),
+    );
+    this.readOnly = calendars.some(
+      (calendar) => calendar.id === eventCalendarId && calendar.readOnly,
+    );
+    if (this.isEdit) {
+      this.form.get('calendarId')?.disable();
     }
 
     if (this.event) {
@@ -121,7 +148,8 @@ import {
       return;
     }
 
-    const value = this.form.value;
+    // The calendar of an edited event is a disabled control, which form.value leaves out
+    const value = this.form.getRawValue() as EventFormValue;
     const calendar = this.calendars.find((item) => item.id === value.calendarId);
     if (!calendar) {
       await this.toast(this.translate.instant('ERRORS.CALENDAR_NOT_FOUND'), 'danger');
@@ -129,13 +157,21 @@ import {
     }
 
     const start = new Date(value.start);
-    const end = value.allDay ? new Date(value.start) : new Date(value.end);
+    const draft: EventDraft = {
+      title: value.title.trim(),
+      description: value.description,
+      start,
+      end: value.allDay ? allDayEnd(start, this.event) : new Date(value.end),
+      allDay: value.allDay,
+      tzid: value.tzid,
+    };
 
     try {
       if (this.isEdit && this.event) {
-        await this.saveExistingEvent(calendar, value, start, end);
+        await this.saveExistingEvent(this.event, draft);
       } else {
-        await this.saveNewEvent(calendar, value, start, end);
+        await this.source.createEvent(calendar, draft);
+        await this.toast(this.translate.instant('EVENT.CREATED'), 'success');
       }
       this.navController.navigateBack('/tabs/calendar');
     } catch (error) {
@@ -143,76 +179,30 @@ import {
     }
   }
 
-  private async saveExistingEvent(
-    calendar: AccountCalendar,
-    value: {
-      calendarId: string;
-      title: string;
-      allDay: boolean;
-      description: string;
-      tzid: string;
-    },
-    start: Date,
-    end: Date,
-  ): Promise<void> {
-    if (!this.event) {
-      return;
-    }
+  private async saveExistingEvent(event: CalendarEvent, draft: EventDraft): Promise<void> {
     const scope = await this.resolveSeriesScope('edit');
     if (!scope) {
       return;
     }
     const timeChanged =
-      value.allDay !== this.event.allDay ||
-      start.getTime() !== this.event.start.getTime() ||
-      (!value.allDay && end.getTime() !== this.event.end.getTime());
+      draft.allDay !== event.allDay ||
+      draft.start.getTime() !== event.start.getTime() ||
+      draft.end.getTime() !== event.end.getTime();
     const writeOptions: EventWriteOptions =
       scope === 'single'
-        ? { scope, recurrenceId: resolveRecurrenceId(this.event) }
+        ? { scope, recurrenceId: resolveRecurrenceId(event) }
         : { scope, skipTimeUpdate: !timeChanged };
-    await this.eventService.updateEvent(
-      {
-        ...this.event,
-        accountId: calendar.accountId,
-        calendarId: value.calendarId,
-        title: value.title.trim(),
-        start,
-        end,
-        allDay: value.allDay,
-        description: value.description,
-        tzid: value.tzid,
-      },
-      writeOptions,
-    );
+    await this.source.updateEvent(event, draft, writeOptions);
     await this.toast(this.translate.instant('EVENT.UPDATED'), 'success');
-  }
-
-  private async saveNewEvent(
-    calendar: AccountCalendar,
-    value: {
-      calendarId: string;
-      title: string;
-      allDay: boolean;
-      description: string;
-      tzid: string;
-    },
-    start: Date,
-    end: Date,
-  ): Promise<void> {
-    await this.eventService.createEvent(calendar.accountId, value.calendarId, {
-      title: value.title.trim(),
-      start,
-      end,
-      allDay: value.allDay,
-      description: value.description,
-      tzid: value.tzid,
-    });
-    await this.toast(this.translate.instant('EVENT.CREATED'), 'success');
   }
 
   private async handleEventActionError(error: unknown): Promise<void> {
     if (isOfflineWriteBlockedError(error)) {
       await this.toast(this.translate.instant('offline.WRITE_DISABLED'), 'warning');
+      return;
+    }
+    if ((error as { code?: unknown } | null)?.code === 'READ_ONLY') {
+      await this.toast(this.translate.instant('EVENT.READ_ONLY'), 'warning');
       return;
     }
     const message =
@@ -233,7 +223,7 @@ import {
         scope === 'single'
           ? { scope, recurrenceId: resolveRecurrenceId(this.event) }
           : { scope };
-      await this.eventService.deleteEvent(this.event, writeOptions);
+      await this.source.deleteEvent(this.event, writeOptions);
       await this.toast(this.translate.instant('EVENT.DELETED'), 'medium');
       this.navController.navigateBack('/tabs/calendar');
     } catch (error) {

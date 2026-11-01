@@ -23,12 +23,11 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import { IonicModule, ToastController, ViewWillEnter } from '@ionic/angular';
 import { ActivatedRoute, Router } from '@angular/router';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
-import { Subject, firstValueFrom, take, takeUntil } from 'rxjs';
+import { Subject, takeUntil } from 'rxjs';
 
 import { AccountCalendar } from '../../core/accounts/account.model';
-import { CalendarService } from '../../core/caldav/calendar.service';
-import { EventService } from '../../core/caldav/event.service';
 import { SyncService, SyncStatus } from '../../core/caldav/sync.service';
+import { CALENDAR_SOURCE } from '../../core/calendar-source/calendar-source';
 import { ConnectivityService } from '../../core/connectivity/connectivity.service';
 import { APP_MODULES } from '../../core/modules/app-modules';
 import { OfflineReadFacade } from '../../core/connectivity/offline-read.facade';
@@ -64,8 +63,7 @@ type ViewKey = 'dayGridMonth' | 'timeGridWeek' | 'timeGridDay' | 'listWeek';
   ],
 })
 export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
-  private readonly calendarService = inject(CalendarService);
-  private readonly eventService = inject(EventService);
+  private readonly source = inject(CALENDAR_SOURCE);
   private readonly syncService = inject(SyncService);
   private readonly router = inject(Router);
   private readonly route = inject(ActivatedRoute);
@@ -84,8 +82,11 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   offlineBannerMessage = '';
 
   get writesEnabled(): boolean {
-    return this.connectivity.isOnline();
+    return !this.source.writesNeedNetwork || this.connectivity.isOnline();
   }
+
+  /** On Android: the app may not read the Android calendar yet. */
+  needsAccess = false;
 
   readonly views: { key: ViewKey; labelKey: string }[] = [
     { key: 'dayGridMonth', labelKey: 'CALENDAR.VIEW_MONTH' },
@@ -146,24 +147,23 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
         this.applyFullCalendarLocale(lang);
       });
 
-    this.calendarService.enabledCalendars$
+    this.source.changed
       .pipe(takeUntil(this.destroy$))
       .subscribe(() => {
         void this.reloadEvents();
       });
 
-    this.eventService.allEvents
-      .pipe(takeUntil(this.destroy$))
-      .subscribe(() => {
-        void this.reloadEvents();
-      });
-
-    this.calendarService.allCalendars$
+    this.source.calendars
       .pipe(takeUntil(this.destroy$))
       .subscribe((calendars) => {
-        this.calendars = calendars.filter((calendar) =>
-          calendar.supportedComponents.includes('VEVENT'),
-        );
+        this.calendars = calendars;
+        this.cdr.markForCheck();
+      });
+
+    this.source.needsAccess
+      .pipe(takeUntil(this.destroy$))
+      .subscribe((needsAccess) => {
+        this.needsAccess = needsAccess;
         this.cdr.markForCheck();
       });
 
@@ -210,10 +210,11 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
     this.isInitialLoad = !this.hasLoaded;
     this.cdr.markForCheck();
 
-    await this.calendarService.loadFromCache();
-    const rangeStart = getBufferedRangeStart(new Date());
-    const rangeEnd = getBufferedRangeEnd(new Date());
-    await this.eventService.loadFromCache(rangeStart, rangeEnd);
+    try {
+      await this.source.open();
+    } catch {
+      // Shown as an empty calendar; pull-to-refresh tries again
+    }
     await this.reloadEvents();
 
     this.hasLoaded = true;
@@ -225,7 +226,7 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   /** Full-range stale sync when the calendar tab is opened. */
   private async syncCalendarIfStale(): Promise<void> {
     try {
-      await this.syncService.syncCalendar();
+      await this.source.refreshIfStale();
       await this.reloadEvents();
     } catch {
       // Background refresh: errors are surfaced via sync status / pull-to-refresh.
@@ -235,7 +236,7 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   async doRefresh(event: CustomEvent): Promise<void> {
     this.isSyncing = true;
     try {
-      await this.syncService.syncCalendar({ force: true });
+      await this.source.refresh();
       await this.reloadEvents();
     } catch {
       await this.showToast(
@@ -262,9 +263,7 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
       const rangeStart = getBufferedRangeStart(viewStart);
       const rangeEnd = getBufferedRangeEnd(viewEnd);
 
-      const rawEvents = await firstValueFrom(
-        this.eventService.getEventsForRange(rangeStart, rangeEnd).pipe(take(1))
-      );
+      const rawEvents = await this.source.eventsForRange(rangeStart, rangeEnd);
       const fcEvents = mapEventsToFullCalendar(
         rawEvents,
         this.calendars,
@@ -294,7 +293,14 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   }
 
   toggleCalendar(calendarId: string): void {
-    void this.calendarService.toggleCalendar(calendarId);
+    void this.source.toggleCalendar(calendarId);
+  }
+
+  async grantAccess(): Promise<void> {
+    if (!(await this.source.grantAccess())) {
+      await this.showToast(this.translate.instant('CALENDAR.ACCESS_DENIED'), 'warning');
+    }
+    await this.reloadEvents();
   }
 
   onEventClick(arg: EventClickArg): void {
@@ -340,6 +346,12 @@ export class CalendarPage implements OnInit, OnDestroy, ViewWillEnter {
   }
 
   private async refreshOfflineBanner(): Promise<void> {
+    if (!this.source.writesNeedNetwork) {
+      // The Android calendar works offline; the sync catches up later
+      this.offlineBannerVisible = false;
+      this.cdr.markForCheck();
+      return;
+    }
     const accountIds = [...new Set(this.calendars.map((calendar) => calendar.accountId))];
     const banner = await resolveOfflineBanner(this.offlineRead, 'calendar', accountIds);
     this.offlineBannerVisible = banner.visible;

@@ -60,17 +60,24 @@ Nextcloud (CalDAV)  <--  WorkManager job (Kotlin, no WebView)  -->  Android Cale
   the password back into the WebView. Certificate pins are stored natively too.
 - **App lock and privacy:** events in the Android calendar can be read by every app the user grants
   calendar access. Sanctum's app lock protects Sanctum, not the Android calendar. The app says so
-  when the sync is switched on.
+  where it asks for calendar access and in the sync settings.
 
 ## Decisions
 
 - All calendars of an account are synced once its sync is switched on; each one can be switched
-  off in Sanctum (2026-11-01).
+  off in Sanctum (2026-11-01). Since 3d every account syncs on Android; single calendars can still
+  be left out (2026-11-01).
+- On Android, Sanctum's calendar reads and writes only the Android calendar; the JavaScript CalDAV
+  sync and its cache are no longer used for calendars there. One copy of the data, and events can
+  be changed offline (2026-11-01).
+- On Android the phone's calendar app reminds of Sanctum's events, as of any other calendar in the
+  Android calendar; Sanctum plans no reminders of its own for them, so none comes twice
+  (2026-11-01).
 - The interval of the background sync is a setting in Sanctum: every 15 minutes (the default),
   hourly, every 4 hours or only on request. After a change on the phone the sync runs at once in any
   case (2026-11-01).
 - Events in the Android calendar are readable by apps with calendar access, as with DAVx5; Sanctum
-  explains this when the sync is switched on (2026-11-01).
+  explains this where it asks for calendar access and in the sync settings (2026-11-01).
 - Until uploads came in 3c, the synced calendars were read-only on the phone (2026-11-01). Since
   3c every calendar the user may write on the server can be changed in any calendar app.
 - A conflict (an event changed on the phone and on the server since the last sync) keeps both
@@ -192,6 +199,42 @@ How 3c is built:
 - Checks: the view shows the same events as the phone's calendar app; edits in Sanctum show up
   there and in Nextcloud.
 
+How 3d is built, in two steps: first the calendar screens on the Android calendar with the editor
+as it was (3d-1), then the new fields of the editor (3d-2).
+
+- **Every account syncs:** registering an account with the native side starts its sync, and the
+  plugin switches on accounts of earlier versions when it loads. The settings keep the switch per
+  calendar, the interval and "Sync now"; the switch per account is gone. Without calendar access
+  the calendar screen asks for it; granting it starts the sync of every account.
+- **One source for the calendar screens:** `CalendarSource` with two implementations, chosen once
+  at start: `NativeCalendarSource` on Android, `CaldavCalendarSource` elsewhere (the earlier path
+  through `CalendarService`, `EventService` and the sync service, unchanged). The calendar page and
+  the editor use only the source.
+- **Reading** (`DeviceEvents`, plugin `listCalendars`, `listEvents`, `getEvent`): the calendars of
+  Sanctum's accounts that sync, and the provider's instances of the visible range, repetitions
+  expanded by Android. A calendar's id is its URL as on the CalDAV path, so whether the calendar
+  screen shows it carries over. All-day dates (midnight UTC in the provider) show on their calendar
+  day in any time zone.
+- **Writing** as a calendar app does, not as the sync adapter, so the provider marks each change
+  and the upload of 3c takes it to the server (the sync framework starts it; with Android's
+  automatic sync switched off, the background job does). A single event is changed in its row.
+  For a date of a repeating event, "this event" adds an exception through
+  `CONTENT_EXCEPTION_URI` (or changes the exception there is), and deleting it adds a cancelled
+  exception, which goes to the server as an `EXDATE`; "all events" changes the series, and a new
+  time moves every date by as much as the edited one; deleting removes the series. Writes to
+  calendars that are read-only on the server are refused (`READ_ONLY`), and the editor offers only
+  writable calendars for new events and does not move events between calendars (that comes with
+  3d-2).
+- **Live:** while the app runs, the plugin watches the Android calendar and reports changes
+  (`calendarChanged`, debounced), so the screen follows the sync, other calendar apps and its own
+  writes. Writes work offline; pull to refresh asks every account for a sync.
+- **No second sync, no second reminder:** on Android the sync service leaves the calendars alone
+  (task lists still come through CalDAV while that module is hidden) and hands no events to the
+  reminders.
+- **Tests:** `NextcloudSyncTest.followsSanctumsCalendar` writes through `DeviceEvents` and checks the
+  server; specs cover the mapping between the provider and the app, all-day days and the sync
+  service on Android.
+
 ### 3e Contacts
 
 - The address books of all accounts in the Android contacts, with the same building blocks
@@ -214,10 +257,15 @@ How 3c is built:
   and on, a calendar removed on the server, and a rejected app password. For the way back it
   inserts, changes and deletes events as a calendar app does, and checks the upload, an upload
   whose answer was lost, a conflict with its copy (and no second copy on the next sync), a deletion
-  of an event changed on the server, and a change to an event deleted on the server.
+  of an event changed on the server, and a change to an event deleted on the server. For
+  Sanctum's own calendar it writes through `DeviceEvents`: a new event, one date of a weekly series
+  changed and one cancelled (an exception and an `EXDATE` on the server), the series renamed with
+  its dates kept and then deleted, and no write to a read-only calendar.
 
 ## Living with DAVx5 during the switch
 
-Before the sync of an account is switched on in Sanctum, its calendars should no longer be synced by
-DAVx5 on the same phone; otherwise every event appears twice in the phone's calendar app. Sanctum
-cannot see what DAVx5 syncs, so the switch-on screen says this.
+The calendars of a Sanctum account should no longer be synced by DAVx5 on the same phone; otherwise
+every event appears twice in the phone's calendar app. Sanctum cannot see what DAVx5 syncs, so it
+says this where it asks for calendar access and in the sync settings. Since 3d every account
+syncs without being switched on, so whoever used DAVx5 for the same accounts switches it off there
+when updating.

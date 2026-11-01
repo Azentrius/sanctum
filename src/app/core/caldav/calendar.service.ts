@@ -9,7 +9,8 @@ import { ConnectivityService } from '../connectivity/connectivity.service';
 import { LocalDbService } from '../storage/local-db.service';
 import { CaldavService } from './caldav.service';
 
-const CALENDAR_ENABLED_PREFIX = 'calendar:enabled:';
+/** Preference key prefix of whether the calendar screen shows a calendar. */
+export const CALENDAR_ENABLED_PREFIX = 'calendar:enabled:';
 
 @Injectable({ providedIn: 'root' })
 export class CalendarService {

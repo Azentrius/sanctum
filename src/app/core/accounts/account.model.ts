@@ -31,6 +31,8 @@ export interface AccountCalendar {
   ctag?: string;
   syncToken?: string;
   readOnly: boolean;
+  /** Row of the calendar in the Android calendar, when Sanctum reads it from there. */
+  nativeId?: number;
 }
 
 export type TaskPriority = 0 | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9;
@@ -95,6 +97,18 @@ export interface CalendarEvent {
    * `start + offset`. Empty/undefined means the event has no reminder.
    */
   reminders?: number[];
+  /** Where the date is in the Android calendar, when Sanctum reads it from there. */
+  native?: NativeEventRef;
+}
+
+/** One date of an event in the Android calendar. */
+export interface NativeEventRef {
+  /** Row of the event, or of the changed date of a repeating event. */
+  eventId: number;
+  /** Start of the date as the Android calendar keeps it (milliseconds). */
+  begin: number;
+  /** Row of the repeating event the date belongs to; missing for a single event. */
+  seriesId?: number;
 }
 
 export interface Attendee {

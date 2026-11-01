@@ -33,8 +33,24 @@
   </ion-refresher>
 
   <div class="calendar-layout">
+    @if (needsAccess) {
+    <div class="access-hint">
+      <div>
+        <p>{{ 'CALENDAR.ACCESS_HINT' | translate }}</p>
+        <p class="note">{{ 'NATIVE_SYNC.PRIVACY' | translate }} {{ 'NATIVE_SYNC.DAVX5' | translate }}</p>
+      </div>
+      <ion-button
+        size="small"
+        (click)="grantAccess()"
+        [appAriaLabel]="'CALENDAR.ACCESS_GRANT' | translate"
+        appAiHint="Allow Sanctum to use the Android calendar"
+      >
+        {{ 'CALENDAR.ACCESS_GRANT' | translate }}
+      </ion-button>
+    </div>
+    }
     <div class="cal-filters">
-      @if (isInitialLoad && calendars.length === 0) {
+      @if (isInitialLoad && calendars.length === 0 && !needsAccess) {
       <div class="filters-loading">
         <app-sanctum-spinner [loading]="true" [message]="'CALENDAR.SYNCING' | translate"></app-sanctum-spinner>
       </div>

@@ -16,6 +16,9 @@
 </ion-header>
 
 <ion-content class="ion-padding">
+  @if (readOnly) {
+  <p class="read-only-note">{{ 'EVENT.READ_ONLY' | translate }}</p>
+  }
   <form [formGroup]="form">
     <ion-item lines="full">
       <ion-label position="stacked">{{ 'EVENT.FIELD_TITLE' | translate }}</ion-label>
@@ -70,7 +73,7 @@
     <ion-item lines="full">
       <div
         slot="start"
-        [style.background]="calendarColor(form.value.calendarId)"
+        [style.background]="calendarColor(form.getRawValue().calendarId)"
         class="calendar-color-dot"
       ></div>
       <ion-select

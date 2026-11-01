@@ -17,6 +17,7 @@ import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Rule
@@ -31,7 +32,9 @@ import java.util.UUID
  * server, an event deleted and made again on the server (which Nextcloud reports as deleted), a
  * sync token the server rejects, switching a calendar off and on, a calendar removed on
  * the server, and a rejected app password; then what calendar apps change on the device: new,
- * changed and deleted events, an upload whose answer was lost, and conflicts both ways.
+ * changed and deleted events, an upload whose answer was lost, and conflicts both ways; and what
+ * Sanctum's own calendar writes through [DeviceEvents]: a new event, one date of a series changed
+ * and one cancelled, the whole series changed and deleted, and no writes to a read-only calendar.
  */
 @RunWith(AndroidJUnit4::class)
 class NextcloudSyncTest {
@@ -210,6 +213,62 @@ class NextcloudSyncTest {
     }
 
     @Test
+    fun followsSanctumsCalendar(): Unit = runBlocking {
+        assertEquals(SyncOutcome.Code.OK, sync().code)
+        server.makeCalendar(calendarUrl, "Sanctum CI", "VEVENT")
+        server.putEvent(calendarUrl + "weekly.ics", calendar(VTIMEZONE_BERLIN, WEEKLY))
+        assertSync(changes = 1)
+
+        val device = DeviceEvents(context)
+        val ci = device.calendars().single { it.url == calendarUrl }
+        assertTrue("calendar read-only", ci.writable)
+
+        // Read-only calendars take no writes, like the birthdays Nextcloud makes
+        device.calendars().firstOrNull { !it.writable }?.let { birthdays ->
+            assertThrows(ReadOnlyCalendarException::class.java) {
+                device.create(birthdays.id, fields("Not allowed", 0L))
+            }
+        }
+
+        // New in Sanctum
+        val begin = 1_794_646_800_000L // 2026-11-14 09:00 UTC
+        val created = device.create(ci.id, fields("From Sanctum", begin))
+        syncOk()
+        val name = checkNotNull(row(created, Events._SYNC_ID)) { "not uploaded" }
+        assertSummary(name, "From Sanctum")
+
+        // The weekly series: 2, 9, 16 and 23 November, 10:00 in Berlin (09:00 UTC)
+        val dates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.uid == "sanctum-ci-weekly" }
+        assertEquals(4, dates.size)
+        assertTrue("not a series", dates.all { it.seriesId != null })
+
+        // One date changed, one cancelled: an exception and an EXDATE on the server
+        val third = dates[2]
+        device.update(third, fields("Weekly (third)", third.begin + 3_600_000L), EventScope.SINGLE)
+        device.delete(dates[3], EventScope.SINGLE)
+        syncOk()
+        val weekly = checkNotNull(server.getEvent(calendarUrl + "weekly.ics"))
+        assertTrue("no exception: $weekly", weekly.lines().any { it.trimEnd() == "SUMMARY:Weekly (third)" })
+        assertTrue("no EXDATE: $weekly", weekly.lines().any { it.startsWith("EXDATE") })
+        val after = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.uid == "sanctum-ci-weekly" }
+        assertEquals(listOf("Weekly", "Weekly", "Weekly (third)"), after.map { it.title })
+
+        // The whole series renamed, its times kept
+        val first = after.first()
+        device.update(first, fields("Weekly (renamed)", first.begin, first.end - first.begin), EventScope.ALL)
+        syncOk()
+        assertSummary("weekly.ics", "Weekly (renamed)")
+        val renamed = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.uid == "sanctum-ci-weekly" }
+        assertEquals(after.map { it.begin }, renamed.map { it.begin })
+
+        // The whole series deleted
+        device.delete(renamed.first(), EventScope.ALL)
+        syncOk()
+        assertNull("series still on the server", server.getEvent(calendarUrl + "weekly.ics"))
+        assertEquals(mapOf(name to "From Sanctum"), mainEvents(ci.id))
+    }
+
+    @Test
     fun reportsARejectedPassword(): Unit = runBlocking {
         credentials.put(accountId, "not-${server.password}")
         assertEquals(SyncOutcome.Code.AUTH, sync().code)
@@ -224,6 +283,9 @@ class NextcloudSyncTest {
     }
 
     private suspend fun syncOk(): SyncOutcome = sync().also { assertEquals(SyncOutcome.Code.OK, it.code) }
+
+    private fun fields(title: String, begin: Long, length: Long = 3_600_000L) =
+        EventFields(title, null, begin, begin + length, allDay = false, timeZone = "Europe/Berlin")
 
     private fun assertSummary(name: String, title: String) {
         val event = server.getEvent(calendarUrl + name)
@@ -331,6 +393,10 @@ class NextcloudSyncTest {
             "END:VCALENDAR").joinToString("\r\n", postfix = "\r\n")
 
     private companion object {
+        /** 2026-11-01 and 2026-12-01, 00:00 UTC */
+        const val NOVEMBER_FROM = 1_793_491_200_000L
+        const val NOVEMBER_TO = 1_796_083_200_000L
+
         val SINGLE = """
             BEGIN:VEVENT
             UID:sanctum-ci-single

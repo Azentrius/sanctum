@@ -293,9 +293,9 @@ class NextcloudSyncTest {
         syncOk()
         val name = checkNotNull(row(seriesId, Events._SYNC_ID)) { "not uploaded" }
         val uploaded = checkNotNull(server.getEvent(calendarUrl + name))
-        assertTrue(uploaded, uploaded.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
-        assertTrue(uploaded, uploaded.contains("LOCATION:Gym"))
-        assertTrue(uploaded, uploaded.contains("TRIGGER:-PT15M"))
+        assertTrue(oneLine("uploaded", uploaded), uploaded.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
+        assertTrue(oneLine("uploaded", uploaded), uploaded.contains("LOCATION:Gym"))
+        assertTrue(oneLine("uploaded", uploaded), uploaded.contains("TRIGGER:-PT15M"))
 
         // What the editor reads for one date of it
         val dates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.seriesId == seriesId }
@@ -313,9 +313,9 @@ class NextcloudSyncTest {
         )
         syncOk()
         val withException = checkNotNull(server.getEvent(calendarUrl + name))
-        assertTrue(withException, withException.contains("RECURRENCE-ID"))
-        assertTrue(withException, withException.contains("LOCATION:Park"))
-        assertTrue(withException, withException.contains("TRIGGER:-PT1H"))
+        assertTrue(oneLine("with exception", withException), withException.contains("RECURRENCE-ID"))
+        assertTrue(oneLine("with exception", withException), withException.contains("LOCATION:Park"))
+        assertTrue(oneLine("with exception", withException), withException.contains("TRIGGER:-PT1H"))
 
         // The series, with its changed date, into the other calendar
         val first = checkNotNull(device.instance(dates[0].eventId, dates[0].begin))
@@ -328,8 +328,8 @@ class NextcloudSyncTest {
         assertNull("still in the first calendar", server.getEvent(calendarUrl + name))
         val movedName = server.eventNames(otherCalendarUrl).single()
         val moved = checkNotNull(server.getEvent(otherCalendarUrl + movedName))
-        assertTrue(moved, moved.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
-        assertTrue(moved, moved.contains("LOCATION:Park"))
+        assertTrue(oneLine("moved", moved), moved.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
+        assertTrue(oneLine("moved", moved), moved.contains("LOCATION:Park"))
         val movedDates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.seriesId == movedId }
         assertEquals(describe(other.id, movedDates), listOf("Gym", "Park", "Gym"), movedDates.map { it.location })
 
@@ -338,9 +338,10 @@ class NextcloudSyncTest {
         device.update(movedFirst, fields("Club once", movedFirst.begin).copy(reminders = listOf(15)), EventScope.ALL)
         syncOk()
         val single = checkNotNull(server.getEvent(otherCalendarUrl + movedName))
-        assertFalse(single, single.contains("RRULE"))
-        assertFalse(single, single.contains("RECURRENCE-ID"))
-        assertTrue(single, single.contains("SUMMARY:Club once"))
+        // The time zone of the event brings RRULE lines of its own (summer time); not the event's
+        assertFalse(oneLine("single", single), single.contains("RRULE:FREQ=WEEKLY"))
+        assertFalse(oneLine("single", single), single.contains("RECURRENCE-ID"))
+        assertTrue(oneLine("single", single), single.contains("SUMMARY:Club once"))
         val left = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.calendarId == other.id }
         assertEquals(listOf("Club once"), left.map { it.title })
         assertEquals(begin, left.single().begin)
@@ -409,6 +410,10 @@ class NextcloudSyncTest {
 
     private fun rowId(calendarId: Long, syncId: String): Long =
         checkNotNull(eventColumn(calendarId, syncId, Events._ID)?.toLong()) { "$syncId not on the device" }
+
+    /** iCalendar on one line: the console shows only the first lines of a failed check's message. */
+    private fun oneLine(label: String, iCalendar: String): String =
+        "$label: " + iCalendar.lines().filter { it.isNotBlank() }.joinToString(" | ") { it.trimEnd() }
 
     /** The event rows of a calendar and the given dates, for the message of a failed check. */
     private fun describe(calendarId: Long, dates: List<DeviceInstance>): String {

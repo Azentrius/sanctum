@@ -252,11 +252,17 @@ internal class CalendarUpload(
         calendar.updateEventRow(id, values)
         // Exceptions added while the series had no name know it by its row only, and Android
         // shows the dates they replace next to them until they carry its name as well
-        calendar.updateEventRows(
+        val tied = calendar.updateEventRows(
             contentValuesOf(Events.ORIGINAL_SYNC_ID to name),
             "${Events.ORIGINAL_ID}=? AND ${Events.ORIGINAL_SYNC_ID} IS NULL",
             arrayOf("$id"),
         )
+        if (tied > 0) {
+            // The provider expands a series again only when an update names its start; the
+            // same start and rule then expand it with these exceptions
+            calendar.getEventRow(id, arrayOf(Events.DTSTART, Events.RRULE, Events.RDATE))
+                ?.let { calendar.updateEventRow(id, it) }
+        }
     }
 
     /** Replaces the event on the device with the server's version; false if it cannot be read. */

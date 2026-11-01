@@ -259,7 +259,9 @@ class NextcloudSyncTest {
 
         // The whole series renamed, its times kept
         val first = after.first()
-        device.update(first, fields("Weekly (renamed)", first.begin, first.end - first.begin), EventScope.ALL)
+        // As the editor does: the rule goes along, or the series would no longer repeat
+        val rule = device.instance(first.eventId, first.begin)?.rrule
+        device.update(first, fields("Weekly (renamed)", first.begin, first.end - first.begin).copy(rrule = rule), EventScope.ALL)
         syncOk()
         assertSummary("weekly.ics", "Weekly (renamed)")
         val renamed = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.uid == "sanctum-ci-weekly" }

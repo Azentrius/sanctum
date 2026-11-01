@@ -250,6 +250,13 @@ internal class CalendarUpload(
         )
         if (sequence != null) values.put(EventsContract.COLUMN_SEQUENCE, sequence)
         calendar.updateEventRow(id, values)
+        // Exceptions added while the series had no name know it by its row only, and Android
+        // shows the dates they replace next to them until they carry its name as well
+        calendar.updateEventRows(
+            contentValuesOf(Events.ORIGINAL_SYNC_ID to name),
+            "${Events.ORIGINAL_ID}=? AND ${Events.ORIGINAL_SYNC_ID} IS NULL",
+            arrayOf("$id"),
+        )
     }
 
     /** Replaces the event on the device with the server's version; false if it cannot be read. */

@@ -170,7 +170,10 @@ How 3c is built:
   the server with `If-Match` (or `If-Schedule-Tag-Match`), then new and changed events. A new event
   gets a UID if it has none, saved before the upload, and its file name comes from the UID (a UUID
   made from the UID when the UID is not a good file name), so a repeated upload uses the same name.
-  After the upload the event takes the server's ETag and is no longer marked as changed.
+  After the upload the event takes the server's ETag and is no longer marked as changed. Exceptions
+  added to a series before its first upload (by Sanctum or another calendar app) know it by its
+  row only, and Android expands the dates they replace next to them until they carry the series'
+  name in `ORIGINAL_SYNC_ID`; the upload sets it.
 - **When the server has another version** (412, or 404 for a change):
   - its version is fetched; if it says the same as the device (apart from `DTSTAMP`, `PRODID` and
     line folding), an earlier upload went through and only its answer was lost: nothing else

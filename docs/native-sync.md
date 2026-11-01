@@ -173,8 +173,9 @@ How 3c is built:
   After the upload the event takes the server's ETag and is no longer marked as changed. Exceptions
   added to a series before its first upload (by Sanctum or another calendar app) know it by its
   row only, and Android expands the dates they replace next to them until they carry the series'
-  name in `ORIGINAL_SYNC_ID`. The upload sets it and then writes the series' start and rule again
-  unchanged, because the provider expands a series anew only when an update names its start.
+  name in `ORIGINAL_SYNC_ID`. So the upload keeps no ETag for such a series, and the download in
+  the same sync fetches it again and stores it with its exceptions tied to its name, as it stores
+  any series from the server.
 - **When the server has another version** (412, or 404 for a change):
   - its version is fetched; if it says the same as the device (apart from `DTSTAMP`, `PRODID` and
     line folding), an earlier upload went through and only its answer was lost: nothing else

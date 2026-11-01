@@ -331,7 +331,7 @@ class NextcloudSyncTest {
         assertTrue(moved, moved.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
         assertTrue(moved, moved.contains("LOCATION:Park"))
         val movedDates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.seriesId == movedId }
-        assertEquals(listOf("Gym", "Park", "Gym"), movedDates.map { it.location })
+        assertEquals(describe(other.id, movedDates), listOf("Gym", "Park", "Gym"), movedDates.map { it.location })
 
         // No longer repeating: one event on its first date, the changed date gone
         val movedFirst = checkNotNull(device.instance(movedId, movedDates[0].begin))
@@ -409,6 +409,37 @@ class NextcloudSyncTest {
 
     private fun rowId(calendarId: Long, syncId: String): Long =
         checkNotNull(eventColumn(calendarId, syncId, Events._ID)?.toLong()) { "$syncId not on the device" }
+
+    /** The event rows of a calendar and the given dates, for the message of a failed check. */
+    private fun describe(calendarId: Long, dates: List<DeviceInstance>): String {
+        val columns = arrayOf(
+            Events._ID,
+            Events._SYNC_ID,
+            Events.ORIGINAL_ID,
+            Events.ORIGINAL_SYNC_ID,
+            Events.ORIGINAL_INSTANCE_TIME,
+            Events.DTSTART,
+            Events.RRULE,
+            Events.STATUS,
+            Events.DELETED,
+            Events.DIRTY,
+            Events.EVENT_LOCATION,
+        )
+        val rows = mutableListOf<String>()
+        context.contentResolver.query(
+            Events.CONTENT_URI,
+            columns,
+            "${Events.CALENDAR_ID}=?",
+            arrayOf("$calendarId"),
+            null,
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                rows += columns.indices.joinToString(", ") { "${columns[it]}=${cursor.getString(it)}" }
+            }
+        }
+        val instances = dates.joinToString("; ") { "event ${it.eventId} at ${it.begin} (${it.location})" }
+        return "rows: ${rows.joinToString(" | ")}; dates: $instances"
+    }
 
     private fun <T> withCalendars(block: (LocalCalendars) -> T): T {
         val account = checkNotNull(accounts.find(accountId))

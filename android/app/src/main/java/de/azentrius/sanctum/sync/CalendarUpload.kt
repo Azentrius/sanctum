@@ -242,27 +242,22 @@ internal class CalendarUpload(
     }
 
     private fun markUploaded(id: Long, name: String, tags: Tags, sequence: Int?) {
+        // Exceptions added while the series had no name know it by its row only, and Android
+        // shows the dates they replace next to them. Without an ETag the download that follows
+        // fetches the series again and stores it with its exceptions tied to its name, as it
+        // stores any series from the server.
+        val untied = calendar.countEvents(
+            "${Events.ORIGINAL_ID}=? AND ${Events.ORIGINAL_SYNC_ID} IS NULL",
+            arrayOf("$id"),
+        ) > 0
         val values = contentValuesOf(
             Events.DIRTY to 0,
             Events._SYNC_ID to name,
-            EventsContract.COLUMN_ETAG to tags.eTag,
+            EventsContract.COLUMN_ETAG to if (untied) null else tags.eTag,
             EventsContract.COLUMN_SCHEDULE_TAG to tags.scheduleTag,
         )
         if (sequence != null) values.put(EventsContract.COLUMN_SEQUENCE, sequence)
         calendar.updateEventRow(id, values)
-        // Exceptions added while the series had no name know it by its row only, and Android
-        // shows the dates they replace next to them until they carry its name as well
-        val tied = calendar.updateEventRows(
-            contentValuesOf(Events.ORIGINAL_SYNC_ID to name),
-            "${Events.ORIGINAL_ID}=? AND ${Events.ORIGINAL_SYNC_ID} IS NULL",
-            arrayOf("$id"),
-        )
-        if (tied > 0) {
-            // The provider expands a series again only when an update names its start; the
-            // same start and rule then expand it with these exceptions
-            calendar.getEventRow(id, arrayOf(Events.DTSTART, Events.RRULE, Events.RDATE))
-                ?.let { calendar.updateEventRow(id, it) }
-        }
     }
 
     /** Replaces the event on the device with the server's version; false if it cannot be read. */

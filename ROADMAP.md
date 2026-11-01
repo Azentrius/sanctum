@@ -21,7 +21,7 @@ until this works well and then come back one by one.
 - A new app icon: the shield of the earlier icon, gold on ink, with the dot of the word mark as the
   light inside; the start screen in ink and the notification icon follow it.
 
-## 3. Calendar sync with Android
+## 3. Calendar sync with Android (calendars done in 0.9.0, contacts next)
 
 A native sync for Android, in stages; each stage is checked on a real device before the next one.
 The architecture, the stages and their checks are in [docs/native-sync.md](docs/native-sync.md).

@@ -1,9 +1,9 @@
 # Sanctum
 
 Nextcloud on Android in one app, for several accounts at once. Sanctum starts with the calendar: a
-calendar view of all accounts and, as the next big step, a sync of their calendars into the Android
-calendar that runs in the background, so that a separate sync app such as DAVx5 is no longer needed.
-Contacts, files, Talk, tasks and notes follow once the calendar works well.
+calendar view of all accounts and a sync of their calendars with the Android calendar that runs in
+the background, so that a separate sync app such as DAVx5 is no longer needed. Contacts, files,
+Talk, tasks and notes follow once the calendar works well.
 
 Sanctum is built with Ionic 8, Angular 21 and Capacitor 8; the Android parts are native. It is in
 its 0.x line: usable, but changing quickly. What comes next is in the [roadmap](ROADMAP.md), what
@@ -15,8 +15,12 @@ changed in the [changelog](CHANGELOG.md).
   password, no OAuth setup on the server). App passwords are kept in the Android Keystore. When a
   server rejects an app password, the account asks you to sign in again and keeps its data.
 - **Calendar:** month, week, day and agenda views of the calendars of all accounts, each in its
-  calendar's colour; calendars can be shown or hidden; events can be created, edited and deleted.
-  Changes are written with `If-Match`, so a newer version on the server is never overwritten.
+  calendar's colour; calendars can be shown or hidden; events can be created, edited and deleted,
+  with location, repetition and reminders, and moved to another calendar.
+- **Calendar sync on Android:** the calendars of all accounts are kept in the Android calendar and
+  synced in the background, so every calendar app on the phone shows and changes them, also
+  offline. Changes are written with `If-Match`, so a newer version on the server is never
+  overwritten; a conflict keeps both versions. How it works: [docs/native-sync.md](docs/native-sync.md).
 - **App lock:** optional biometric unlock after a timeout, screenshot protection, and an encrypted
   local cache (SQLCipher).
 - **Languages:** English and German, or the system language.
@@ -24,7 +28,7 @@ changed in the [changelog](CHANGELOG.md).
   settings.
 
 The app already contains first versions of modules for tasks, files, Talk, notes and contacts. They
-are hidden until the calendar and its sync are done; one setting in
+are hidden for now and come back one by one; one setting in
 `src/app/core/modules/app-modules.ts` decides which modules the app shows.
 
 ## Building

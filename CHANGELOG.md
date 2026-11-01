@@ -1,10 +1,27 @@
 # Changelog
 
-## 0.9.0 – 2026-11-01
+## 0.9.0 – 2026-11-02
 
-Sanctum follows the Azentrius design system, has its new icon and brings the security fixes of its
-libraries.
+On Android, Sanctum syncs the calendars of its accounts with the Android calendar itself, without a
+separate sync app. It also follows the Azentrius design system, has its new icon and brings the
+security fixes of its libraries.
 
+- On Android, Sanctum keeps the calendars of all its accounts in the Android calendar and syncs
+  them in the background, also while Sanctum is closed: every calendar app and widget on the phone
+  shows them, and changes made there, also offline, go to Nextcloud. Sanctum's own calendar shows
+  and changes the same events, so it works offline too. The background sync runs every 15 minutes,
+  hourly, every 4 hours or only on request, and right after a change on the phone; single
+  calendars can be left out in "Calendar sync" in the settings.
+- If an event was changed on the phone and on the server at the same time, the server's version
+  applies, and the phone's stays in the calendar as a copy with "(copy)" after its title.
+- The event editor sets the location, the repetition (every day, every weekday, week, month or
+  year, ending never, on a date or after a number of times) and several reminders, and moves an
+  event, also a whole series, to another calendar. Calendars that are read-only on the server stay
+  read-only.
+- On Android the phone's calendar app reminds of the events; Sanctum no longer schedules reminders
+  of its own for them, so none comes twice.
+- Every app with calendar access can read these events, as with DAVx5. If DAVx5 already syncs the
+  same accounts, switch it off there, or every event appears twice.
 - Colours, type and controls come from the design system: its dark and light themes, DM Sans, pill
   buttons, flat cards and lists, tabs with a line under the selected one, no ripple on touch. The
   calendar views use the same colours.

@@ -336,7 +336,10 @@ class SanctumSyncPlugin : Plugin() {
         }
     }
 
-    /** Changes the date `eventId`/`begin`; `scope` "single" or "all" for a repeating event. */
+    /**
+     * Changes the date `eventId`/`begin`; `scope` "single" or "all" for a repeating event. With
+     * another `calendarId` the event, a whole series, moves there.
+     */
     @PluginMethod
     fun updateEvent(call: PluginCall) {
         val fields = fieldsOf(call)
@@ -345,10 +348,15 @@ class SanctumSyncPlugin : Plugin() {
             call.reject("Missing event fields or scope", "INVALID_ARGUMENT")
             return
         }
+        val targetCalendarId = longArgument(call, "calendarId")
         if (!requirePermission(call)) return
         val instance = findInstance(call) ?: return
         write(call) {
-            events.update(instance, fields, scope)
+            if (targetCalendarId != null && targetCalendarId != instance.calendarId) {
+                events.move(instance, targetCalendarId, fields)
+            } else {
+                events.update(instance, fields, scope)
+            }
             call.resolve()
         }
     }
@@ -425,6 +433,11 @@ class SanctumSyncPlugin : Plugin() {
             end = end,
             allDay = call.getBoolean("allDay") ?: false,
             timeZone = call.getString("timeZone")?.takeIf { it.isNotEmpty() } ?: java.util.TimeZone.getDefault().id,
+            location = call.getString("location")?.takeIf { it.isNotEmpty() },
+            rrule = call.getString("rrule")?.takeIf { it.isNotEmpty() },
+            reminders = call.getArray("reminders", null)?.let { array ->
+                (0 until array.length()).mapNotNull { (array.opt(it) as? Number)?.toInt() }
+            },
         )
     }
 
@@ -447,6 +460,8 @@ class SanctumSyncPlugin : Plugin() {
         .put("timeZone", instance.timeZone)
         .put("uid", instance.uid)
         .put("seriesId", instance.seriesId)
+        .put("rrule", instance.rrule)
+        .put("reminders", JSArray(instance.reminders))
 
     /**
      * Calendar access granted: from now on the app hears of changes in the Android calendar,

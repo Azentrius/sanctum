@@ -34,7 +34,9 @@ import java.util.UUID
  * the server, and a rejected app password; then what calendar apps change on the device: new,
  * changed and deleted events, an upload whose answer was lost, and conflicts both ways; and what
  * Sanctum's own calendar writes through [DeviceEvents]: a new event, one date of a series changed
- * and one cancelled, the whole series changed and deleted, and no writes to a read-only calendar.
+ * and one cancelled, the whole series changed and deleted, and no writes to a read-only calendar;
+ * and its editor: location, repetition and reminders, one date with its own, moving a series with
+ * that date into another calendar, and a series that no longer repeats.
  */
 @RunWith(AndroidJUnit4::class)
 class NextcloudSyncTest {
@@ -52,6 +54,7 @@ class NextcloudSyncTest {
     private val accountId = "ci-$run"
     private val calendarUrl = "${server.calendarHome}sanctum-ci-$run/"
     private val tasksUrl = "${server.calendarHome}sanctum-ci-tasks-$run/"
+    private val otherCalendarUrl = "${server.calendarHome}sanctum-ci-other-$run/"
 
     @Before
     fun setUp() {
@@ -65,6 +68,7 @@ class NextcloudSyncTest {
         credentials.remove(accountId)
         server.delete(calendarUrl)
         server.delete(tasksUrl)
+        server.delete(otherCalendarUrl)
     }
 
     @Test
@@ -255,7 +259,9 @@ class NextcloudSyncTest {
 
         // The whole series renamed, its times kept
         val first = after.first()
-        device.update(first, fields("Weekly (renamed)", first.begin, first.end - first.begin), EventScope.ALL)
+        // As the editor does: the rule goes along, or the series would no longer repeat
+        val rule = device.instance(first.eventId, first.begin)?.rrule
+        device.update(first, fields("Weekly (renamed)", first.begin, first.end - first.begin).copy(rrule = rule), EventScope.ALL)
         syncOk()
         assertSummary("weekly.ics", "Weekly (renamed)")
         val renamed = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.uid == "sanctum-ci-weekly" }
@@ -266,6 +272,78 @@ class NextcloudSyncTest {
         syncOk()
         assertNull("series still on the server", server.getEvent(calendarUrl + "weekly.ics"))
         assertEquals(mapOf(name to "From Sanctum"), mainEvents(ci.id))
+    }
+
+    @Test
+    fun followsSanctumsEditor(): Unit = runBlocking {
+        assertEquals(SyncOutcome.Code.OK, sync().code)
+        server.makeCalendar(calendarUrl, "Sanctum CI", "VEVENT")
+        server.makeCalendar(otherCalendarUrl, "Sanctum CI other", "VEVENT")
+        syncOk()
+        val device = DeviceEvents(context)
+        val ci = device.calendars().single { it.url == calendarUrl }
+        val other = device.calendars().single { it.url == otherCalendarUrl }
+
+        // A weekly series with a place and a reminder: 14, 21 and 28 November
+        val begin = 1_794_646_800_000L // 2026-11-14 09:00 UTC
+        val seriesId = device.create(
+            ci.id,
+            fields("Club", begin).copy(location = "Gym", rrule = "FREQ=WEEKLY;COUNT=3", reminders = listOf(15)),
+        )
+        syncOk()
+        val name = checkNotNull(row(seriesId, Events._SYNC_ID)) { "not uploaded" }
+        val uploaded = checkNotNull(server.getEvent(calendarUrl + name))
+        assertTrue(uploaded, uploaded.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
+        assertTrue(uploaded, uploaded.contains("LOCATION:Gym"))
+        assertTrue(uploaded, uploaded.contains("TRIGGER:-PT15M"))
+
+        // What the editor reads for one date of it
+        val dates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.seriesId == seriesId }
+        assertEquals(3, dates.size)
+        val second = checkNotNull(device.instance(dates[1].eventId, dates[1].begin))
+        assertEquals("FREQ=WEEKLY;COUNT=3", second.rrule)
+        assertEquals(listOf(15), second.reminders)
+        assertEquals("Gym", second.location)
+
+        // That date elsewhere, with a reminder of its own
+        device.update(
+            second,
+            fields("Club", second.begin).copy(location = "Park", rrule = second.rrule, reminders = listOf(60)),
+            EventScope.SINGLE,
+        )
+        syncOk()
+        val withException = checkNotNull(server.getEvent(calendarUrl + name))
+        assertTrue(withException, withException.contains("RECURRENCE-ID"))
+        assertTrue(withException, withException.contains("LOCATION:Park"))
+        assertTrue(withException, withException.contains("TRIGGER:-PT1H"))
+
+        // The series, with its changed date, into the other calendar
+        val first = checkNotNull(device.instance(dates[0].eventId, dates[0].begin))
+        val movedId = device.move(
+            first,
+            other.id,
+            fields("Club", first.begin).copy(location = "Gym", rrule = first.rrule, reminders = listOf(15)),
+        )
+        syncOk()
+        assertNull("still in the first calendar", server.getEvent(calendarUrl + name))
+        val movedName = server.eventNames(otherCalendarUrl).single()
+        val moved = checkNotNull(server.getEvent(otherCalendarUrl + movedName))
+        assertTrue(moved, moved.contains("RRULE:FREQ=WEEKLY;COUNT=3"))
+        assertTrue(moved, moved.contains("LOCATION:Park"))
+        val movedDates = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.seriesId == movedId }
+        assertEquals(listOf("Gym", "Park", "Gym"), movedDates.map { it.location })
+
+        // No longer repeating: one event on its first date, the changed date gone
+        val movedFirst = checkNotNull(device.instance(movedId, movedDates[0].begin))
+        device.update(movedFirst, fields("Club once", movedFirst.begin).copy(reminders = listOf(15)), EventScope.ALL)
+        syncOk()
+        val single = checkNotNull(server.getEvent(otherCalendarUrl + movedName))
+        assertFalse(single, single.contains("RRULE"))
+        assertFalse(single, single.contains("RECURRENCE-ID"))
+        assertTrue(single, single.contains("SUMMARY:Club once"))
+        val left = device.instances(NOVEMBER_FROM, NOVEMBER_TO).filter { it.calendarId == other.id }
+        assertEquals(listOf("Club once"), left.map { it.title })
+        assertEquals(begin, left.single().begin)
     }
 
     @Test

@@ -73,6 +73,15 @@ Nextcloud (CalDAV)  <--  WorkManager job (Kotlin, no WebView)  -->  Android Cale
 - On Android the phone's calendar app reminds of Sanctum's events, as of any other calendar in the
   Android calendar; Sanctum plans no reminders of its own for them, so none comes twice
   (2026-11-01).
+- The editor sets the repetition as a choice with an end: never, every day, every weekday (Monday
+  to Friday), every week, every month, every year, ending never, on a date or after a number of
+  times. A rule from elsewhere that fits none of these shows as "custom" and stays as it is unless
+  another choice is made (2026-11-01).
+- An event can have several reminders from a fixed list: at the start, 5, 10, 15 or 30 minutes,
+  1 hour, 1 day or 1 week before; all-day events at 9:00 on the day, the day before, two days or a
+  week before (2026-11-01).
+- Moving a repeating event to another calendar takes its changed and cancelled dates along, so
+  nothing is lost (2026-11-01).
 - The interval of the background sync is a setting in Sanctum: every 15 minutes (the default),
   hourly, every 4 hours or only on request. After a change on the phone the sync runs at once in any
   case (2026-11-01).
@@ -161,7 +170,10 @@ How 3c is built:
   the server with `If-Match` (or `If-Schedule-Tag-Match`), then new and changed events. A new event
   gets a UID if it has none, saved before the upload, and its file name comes from the UID (a UUID
   made from the UID when the UID is not a good file name), so a repeated upload uses the same name.
-  After the upload the event takes the server's ETag and is no longer marked as changed.
+  After the upload the event takes the server's ETag and is no longer marked as changed. Exceptions
+  added to a series before its first upload (by Sanctum or another calendar app) know it by its
+  row only, and Android expands the dates they replace next to them until they carry the series'
+  name in `ORIGINAL_SYNC_ID`; the upload sets it.
 - **When the server has another version** (412, or 404 for a change):
   - its version is fetched; if it says the same as the device (apart from `DTSTAMP`, `PRODID` and
     line folding), an earlier upload went through and only its answer was lost: nothing else
@@ -226,8 +238,7 @@ as it was (3d-1), then the new fields of the editor (3d-2).
   series; "all events" changes the series, and a new
   time moves every date by as much as the edited one; deleting removes the series. Writes to
   calendars that are read-only on the server are refused (`READ_ONLY`), and the editor offers only
-  writable calendars for new events and does not move events between calendars (that comes with
-  3d-2).
+  writable calendars for new events and as targets of a move.
 - **Live:** while the app runs, the plugin watches the Android calendar and reports changes
   (`calendarChanged`, debounced), so the screen follows the sync, other calendar apps and its own
   writes. Writes work offline; pull to refresh asks every account for a sync.
@@ -237,6 +248,33 @@ as it was (3d-1), then the new fields of the editor (3d-2).
 - **Tests:** `NextcloudSyncTest.followsSanctumsCalendar` writes through `DeviceEvents` and checks the
   server; specs cover the mapping between the provider and the app, all-day days and the sync
   service on Android.
+
+What 3d-2 adds to the editor, on Android only (the CalDAV path keeps its fields):
+
+- **Location** in the event row (`EVENT_LOCATION`), also for a single date of a series.
+- **Repetition** (`event-details.helpers.ts`): the choices of the decision above become a rule with
+  `FREQ`, `BYDAY` only for weekdays, and `COUNT` or `UNTIL`; the day of a weekly, monthly or yearly
+  repetition is the event's own. `UNTIL` includes its day: a date for all-day events, the last
+  second of that day in UTC otherwise. The editor reads the rule of the series back and keeps one
+  it cannot show. A rule turns a single event into a series (with a duration instead of an end);
+  no rule turns a series into a single event on its first date, and its changed dates go. A new
+  rule or calendar for a date of a series applies to the whole series, so the editor does not ask
+  then.
+- **Reminders** as pop-up rows in the provider's reminders table, in minutes before the start
+  (negative after it; all-day events count from midnight at the start of the day, so 9:00 on the
+  day is -540). Saving replaces the pop-up reminders and leaves others (e-mail) alone; the provider
+  marks the event as changed, and synctools uploads them as `VALARM`. A changed single date gets
+  its own reminders, by default those of its series. Switching between all-day and timed starts
+  the list over, since the two count differently.
+- **Moving** to another calendar: the event, a whole series, is added there with the editor's
+  values and deleted here; on the server a new event in one calendar and a deletion in the other.
+  A series takes its changed and cancelled dates along as exceptions of the new series, moved by as
+  much as the series. Its extra and left-out dates (`RDATE`, `EXDATE`) come along while its rule and
+  times stay.
+- **Tests:** `NextcloudSyncTest.followsSanctumsEditor` checks location, rule and reminder on the
+  server, what the editor reads back for a date, a date with its own place and reminder, a move
+  with that date, and a series that no longer repeats; specs cover the rules, their ends and the
+  names of the reminders.
 
 ### 3e Contacts
 
@@ -263,7 +301,9 @@ as it was (3d-1), then the new fields of the editor (3d-2).
   of an event changed on the server, and a change to an event deleted on the server. For
   Sanctum's own calendar it writes through `DeviceEvents`: a new event, one date of a weekly series
   changed and one cancelled (an exception and an `EXDATE` on the server), the series renamed with
-  its dates kept and then deleted, and no write to a read-only calendar.
+  its dates kept and then deleted, and no write to a read-only calendar. For its editor: location,
+  rule and reminder of a new series, one date with its own place and reminder, the series moved
+  with that date into another calendar, and the series made a single event.
 
 ## Living with DAVx5 during the switch
 

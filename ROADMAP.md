@@ -37,8 +37,8 @@ The architecture, the stages and their checks are in [docs/native-sync.md](docs/
   device's stays as a copy marked "(copy)", and the user deletes the one not wanted.
 - **The app on the same data:** on Android, Sanctum's own calendar view and editor read and write
   the Android calendar, so there is one copy of the data, and every account syncs. The phone's
-  calendar app reminds of the events. The editor gains location, reminders,
-  repetition, moving to another calendar and read-only calendars.
+  calendar app reminds of the events. The editor sets location, repetition and reminders, moves
+  events between calendars and leaves read-only calendars alone.
 - **Contacts:** the address books of all accounts in the Android contacts, the same way.
 
 The mapping between iCalendar and the Android calendar builds on DAVx5's open source libraries,

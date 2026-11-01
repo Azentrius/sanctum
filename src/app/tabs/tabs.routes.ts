@@ -51,6 +51,11 @@ export const tabsRoutes: Routes = [
           import('../features/auth/login/login.page').then((m) => m.LoginPage),
       },
       {
+        path: 'settings/sync',
+        loadChildren: () =>
+          import('../features/settings/sync/sync.routes').then((m) => m.syncRoutes),
+      },
+      {
         path: 'settings/language',
         loadChildren: () =>
           import('../features/settings/language/language.routes').then((m) => m.languageRoutes),

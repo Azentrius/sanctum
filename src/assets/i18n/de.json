@@ -26,6 +26,9 @@
     "REDIRECT_INFO": "Du wirst zum Login deiner Nextcloud weitergeleitet."
   },
   "CALENDAR": {
+    "ACCESS_HINT": "Sanctum legt deine Kalender im Android-Kalender ab und braucht Zugriff darauf.",
+    "ACCESS_GRANT": "Erlauben",
+    "ACCESS_DENIED": "Kein Kalenderzugriff. Du kannst ihn in den Android-Einstellungen für Sanctum erlauben.",
     "TITLE": "Kalender",
     "TODAY": "Heute",
     "NEW_EVENT": "Termin",
@@ -46,6 +49,7 @@
     "SERIES_SCOPE_ALL": "Alle Termine"
   },
   "EVENT": {
+    "READ_ONLY": "Diesen Kalender darfst du auf dem Server nur lesen.",
     "NEW_TITLE": "Neuer Termin",
     "EDIT_TITLE": "Termin bearbeiten",
     "FIELD_TITLE": "Titel",
@@ -440,7 +444,7 @@
   },
   "NATIVE_SYNC": {
     "TITLE": "Kalender-Sync",
-    "INTRO": "Sanctum legt die Kalender deiner Konten im Android-Kalender ab. So zeigen auch andere Kalender-Apps und Widgets deine Termine. Der Sync läuft im Hintergrund, auch wenn Sanctum geschlossen ist.",
+    "INTRO": "Sanctum legt die Kalender deiner Konten im Android-Kalender ab und zeigt sie von dort. So zeigen auch andere Kalender-Apps und Widgets deine Termine. Der Sync läuft im Hintergrund, auch wenn Sanctum geschlossen ist. Einzelne Kalender kannst du auslassen.",
     "PRIVACY": "Jede App mit Kalenderzugriff kann diese Termine lesen, wie bei DAVx5.",
     "EDITING": "Andere Kalender-Apps können diese Termine ändern. Sanctum lädt eine Änderung sofort hoch, ohne Verbindung beim nächsten Sync. Kalender, die du auf dem Server nur lesen darfst, bleiben schreibgeschützt.",
     "CONFLICT_NOTE": "Wurde ein Termin hier und auf dem Server gleichzeitig geändert, gilt die Fassung vom Server. Deine bleibt als Kopie im Kalender, mit „(Kopie)“ hinter dem Titel.",
@@ -453,7 +457,6 @@
     "INTERVAL_60": "Stündlich",
     "INTERVAL_240": "Alle 4 Stunden",
     "INTERVAL_MANUAL": "Nur manuell",
-    "ACCOUNT_TOGGLE": "Kalender synchronisieren",
     "SYNC_NOW": "Jetzt synchronisieren",
     "NO_ACCOUNTS": "Noch kein Konto. Füge zuerst in den Einstellungen eines hinzu.",
     "LOAD_FAILED": "Die Sync-Einstellungen konnten nicht gelesen werden.",

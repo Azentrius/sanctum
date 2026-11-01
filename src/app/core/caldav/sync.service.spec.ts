@@ -16,6 +16,7 @@ import { AccountService } from '../accounts/account.service';
 import { AddressBookService } from '../carddav/addressbook.service';
 import { ContactService } from '../carddav/contact.service';
 import { ALL_MODULES, APP_MODULES, AppModules, ENABLED_MODULES } from '../modules/app-modules';
+import { NativeSyncAccountsService } from '../native-sync/native-sync-accounts.service';
 import { NotificationService } from '../notifications/notification.service';
 import { LocalDbService } from '../storage/local-db.service';
 import { CalendarService } from './calendar.service';
@@ -45,7 +46,8 @@ let present: ReturnType<typeof vi.fn>;
 let reschedule: ReturnType<typeof vi.fn>;
 let activeAccounts$: BehaviorSubject<{ id: string }[]>;
 
-function setUp(modules: AppModules): void {
+/** `nativeCalendars`: as on Android, where the native sync keeps the calendars. */
+function setUp(modules: AppModules, nativeCalendars = false): void {
   loadCalendarsForAccount = vi.fn().mockResolvedValue(undefined);
   loadEventsForAccount = vi.fn().mockResolvedValue(undefined);
   loadAddressBooksForAccount = vi.fn().mockResolvedValue(undefined);
@@ -106,6 +108,10 @@ function setUp(modules: AppModules): void {
       },
       ToastController,
       { provide: APP_MODULES, useValue: modules },
+      {
+        provide: NativeSyncAccountsService,
+        useValue: { isAvailable: () => nativeCalendars },
+      },
     ],
   });
   service = TestBed.inject(SyncService);
@@ -186,6 +192,30 @@ describe('SyncService.syncAccount', () => {
 
     const status = await firstValueFrom(service.getSyncStatus(ACCOUNT_ID));
     expect(status.error).toBe('Server overloaded');
+  });
+});
+
+describe('SyncService on Android', () => {
+  beforeEach(() => {
+    TestBed.resetTestingModule();
+    setUp(ALL_MODULES, true);
+  });
+
+  it('leaves the calendars to the native sync', async () => {
+    await service.syncCalendar({ force: true });
+    await service.syncAll({ force: true });
+    await service.syncAccount(ACCOUNT_ID);
+
+    // Task lists still come through CalDAV; events do not
+    expect(loadEventsForAccount).not.toHaveBeenCalled();
+    expect(saveCalendarSync).not.toHaveBeenCalled();
+    expect(loadContactsForAccount).toHaveBeenCalled();
+  });
+
+  it('plans no calendar reminders; the phone\'s calendar app reminds', async () => {
+    await service.syncAll({ force: true });
+
+    expect(reschedule).toHaveBeenCalledWith([], []);
   });
 });
 

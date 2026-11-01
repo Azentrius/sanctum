@@ -26,6 +26,9 @@
     "REDIRECT_INFO": "You will be redirected to your Nextcloud login."
   },
   "CALENDAR": {
+    "ACCESS_HINT": "Sanctum keeps your calendars in the Android calendar and needs access to it.",
+    "ACCESS_GRANT": "Allow",
+    "ACCESS_DENIED": "No calendar access. You can allow it in the Android settings for Sanctum.",
     "TITLE": "Calendar",
     "TODAY": "Today",
     "NEW_EVENT": "Event",
@@ -46,6 +49,7 @@
     "SERIES_SCOPE_ALL": "All events"
   },
   "EVENT": {
+    "READ_ONLY": "This calendar is read-only for you on the server.",
     "NEW_TITLE": "New Event",
     "EDIT_TITLE": "Edit Event",
     "FIELD_TITLE": "Title",
@@ -440,7 +444,7 @@
   },
   "NATIVE_SYNC": {
     "TITLE": "Calendar sync",
-    "INTRO": "Sanctum puts the calendars of your accounts into the Android calendar, so other calendar apps and widgets show your events too. The sync runs in the background, also when Sanctum is closed.",
+    "INTRO": "Sanctum keeps the calendars of your accounts in the Android calendar and shows them from there, so other calendar apps and widgets show your events too. The sync runs in the background, also when Sanctum is closed. You can leave out single calendars.",
     "PRIVACY": "Every app with calendar access can read these events, as with DAVx5.",
     "EDITING": "Other calendar apps can change these events. Sanctum uploads a change right away, or with the next sync when there is no connection. Calendars you may only read on the server stay read-only.",
     "CONFLICT_NOTE": "If an event was changed here and on the server at the same time, the server's version applies, and yours stays in the calendar as a copy with “(copy)” after the title.",
@@ -453,7 +457,6 @@
     "INTERVAL_60": "Every hour",
     "INTERVAL_240": "Every 4 hours",
     "INTERVAL_MANUAL": "Only manually",
-    "ACCOUNT_TOGGLE": "Sync calendars",
     "SYNC_NOW": "Sync now",
     "NO_ACCOUNTS": "No account yet. Add one in the settings first.",
     "LOAD_FAILED": "The sync settings could not be read.",

@@ -36,7 +36,8 @@ The architecture, the stages and their checks are in [docs/native-sync.md](docs/
   `If-Match` and `If-None-Match`. A conflict keeps both versions: the server's applies, the
   device's stays as a copy marked "(copy)", and the user deletes the one not wanted.
 - **The app on the same data:** on Android, Sanctum's own calendar view and editor read and write
-  the Android calendar, so there is one copy of the data. The editor gains location, reminders,
+  the Android calendar, so there is one copy of the data, and every account syncs. The phone's
+  calendar app reminds of the events. The editor gains location, reminders,
   repetition, moving to another calendar and read-only calendars.
 - **Contacts:** the address books of all accounts in the Android contacts, the same way.
 

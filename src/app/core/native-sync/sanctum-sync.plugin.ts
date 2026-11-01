@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-import { PermissionState, registerPlugin } from '@capacitor/core';
+import { PermissionState, PluginListenerHandle, registerPlugin } from '@capacitor/core';
 
 /** One Android account of Sanctum, as the native side lists it. */
 export interface NativeSyncAccount {
@@ -36,7 +36,6 @@ export interface NativeSyncCalendar {
 export interface NativeSyncAccountState {
   accountId: string;
   name: string;
-  enabled: boolean;
   running: boolean;
   lastSync?: {
     finishedAt: number;
@@ -61,13 +60,64 @@ export interface CalendarPermissionStatus {
   calendar: PermissionState;
 }
 
+/** A calendar of an account in the Android calendar, for Sanctum's own calendar. */
+export interface DeviceCalendar {
+  id: number;
+  accountId: string;
+  /** The calendar's URL on the server. */
+  url: string;
+  name: string;
+  /** "#RRGGBB"; missing when the calendar has none. */
+  color?: string;
+  readOnly: boolean;
+}
+
+/** One date of an event in the Android calendar. Times in milliseconds. */
+export interface DeviceEvent {
+  /** Row of the event, or of the changed date of a repeating event. */
+  eventId: number;
+  begin: number;
+  /** All-day dates begin and end at midnight UTC; `end` is the day after the last one. */
+  end: number;
+  allDay: boolean;
+  title?: string;
+  location?: string;
+  description?: string;
+  calendarId: number;
+  /** "#RRGGBB" of the event or its calendar. */
+  color?: string;
+  timeZone?: string;
+  uid?: string;
+  /** Row of the repeating event the date belongs to; missing for a single event. */
+  seriesId?: number;
+}
+
+/** What Sanctum's editor sets. All-day events: as in {@link DeviceEvent}. */
+export interface DeviceEventFields {
+  title: string;
+  description?: string;
+  start: number;
+  end: number;
+  allDay: boolean;
+  timeZone: string;
+}
+
+/** For a date of a repeating event: only this date, or the whole series. */
+export type DeviceEventScope = 'single' | 'all';
+
 /**
  * Bridge to the native sync on Android (`SanctumSyncPlugin.kt`). The app registers each account
  * with its app password and removes it again; no method returns a password. It also switches the
  * calendar sync per account and per calendar, sets the interval and asks for a sync now.
  *
- * Switching off removes the events from the device. While some were changed on the device and are
- * not uploaded yet, it fails with the code `PENDING_CHANGES`, unless `discardChanges` is set.
+ * Every account syncs. Sanctum's own calendar reads and writes the events in the Android calendar
+ * through `listCalendars`, `listEvents` and the event methods; writes to a read-only calendar fail
+ * with the code `READ_ONLY`, every method without calendar access with `PERMISSION_REQUIRED`. The
+ * event `calendarChanged` reports changes in the Android calendar while the app runs.
+ *
+ * Switching a calendar off removes its events from the device. While some were changed on the
+ * device and are not uploaded yet, it fails with the code `PENDING_CHANGES`, unless
+ * `discardChanges` is set.
  */
 export interface SanctumSyncPlugin {
   getAvailability(): Promise<{ available: boolean; version: number }>;
@@ -83,11 +133,6 @@ export interface SanctumSyncPlugin {
   checkPermissions(): Promise<CalendarPermissionStatus>;
   requestPermissions(options?: { permissions: 'calendar'[] }): Promise<CalendarPermissionStatus>;
   getSyncOverview(): Promise<NativeSyncOverview>;
-  setAccountSync(options: {
-    accountId: string;
-    enabled: boolean;
-    discardChanges?: boolean;
-  }): Promise<void>;
   setCalendarSync(options: {
     accountId: string;
     calendarId: number;
@@ -96,6 +141,17 @@ export interface SanctumSyncPlugin {
   }): Promise<void>;
   setSyncInterval(options: { minutes: number }): Promise<void>;
   syncNow(options: { accountId: string }): Promise<void>;
+  syncAll(): Promise<void>;
+
+  listCalendars(): Promise<{ calendars: DeviceCalendar[] }>;
+  listEvents(options: { from: number; to: number }): Promise<{ events: DeviceEvent[] }>;
+  getEvent(options: { eventId: number; begin: number }): Promise<{ event: DeviceEvent }>;
+  createEvent(options: { calendarId: number } & DeviceEventFields): Promise<{ eventId: number }>;
+  updateEvent(
+    options: { eventId: number; begin: number; scope: DeviceEventScope } & DeviceEventFields,
+  ): Promise<void>;
+  deleteEvent(options: { eventId: number; begin: number; scope: DeviceEventScope }): Promise<void>;
+  addListener(eventName: 'calendarChanged', listener: () => void): Promise<PluginListenerHandle>;
 }
 
 export const SanctumSync = registerPlugin<SanctumSyncPlugin>('SanctumSync');

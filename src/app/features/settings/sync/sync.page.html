@@ -64,27 +64,15 @@
     </ion-list-header>
     <ion-item>
       <ion-label class="ion-text-wrap">
-        <h2>{{ 'NATIVE_SYNC.ACCOUNT_TOGGLE' | translate }}</h2>
-        @if (account.enabled) {
         <p>
           {{ statusKey(account) | translate: { time: lastSyncTime(account), changes: account.lastSync?.changes ?? 0 } }}
         </p>
         @if (conflictCount(account) > 0) {
         <p>{{ 'NATIVE_SYNC.CONFLICTS' | translate: { count: conflictCount(account) } }}</p>
         }
-        }
       </ion-label>
-      <ion-toggle
-        slot="end"
-        [checked]="account.enabled"
-        [disabled]="busy()"
-        (ionChange)="onAccountToggle(account, $event)"
-        [appAriaLabel]="'NATIVE_SYNC.ACCOUNT_TOGGLE' | translate"
-        appAiHint="Calendar sync: put this account's calendars into the Android calendar"
-      ></ion-toggle>
     </ion-item>
 
-    @if (account.enabled) {
     @for (calendar of account.calendars; track calendar.id) {
     <ion-item>
       <span
@@ -122,7 +110,6 @@
         {{ 'NATIVE_SYNC.SYNC_NOW' | translate }}
       </ion-button>
     </ion-item>
-    }
   </ion-list>
   } @empty {
   <p class="ion-padding">{{ 'NATIVE_SYNC.NO_ACCOUNTS' | translate }}</p>

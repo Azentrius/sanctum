@@ -96,28 +96,6 @@ export class SyncPage implements OnDestroy {
     await this.run(() => this.sync.setInterval(minutes));
   }
 
-  async onAccountToggle(account: NativeSyncAccountState, event: CustomEvent): Promise<void> {
-    const enabled = event.detail.checked as boolean;
-    if (enabled === account.enabled) {
-      return;
-    }
-    await this.run(
-      async () => {
-        let permitted = true;
-        const switched = await this.allowingDiscard(async (discardChanges) => {
-          permitted = await this.sync.setAccountSync(account.accountId, enabled, discardChanges);
-        });
-        if (!switched || !permitted) {
-          this.setToggle(event, !enabled);
-        }
-        if (!permitted) {
-          await this.showToast('NATIVE_SYNC.PERMISSION_DENIED');
-        }
-      },
-      () => this.setToggle(event, !enabled),
-    );
-  }
-
   async onCalendarToggle(
     account: NativeSyncAccountState,
     calendar: NativeSyncCalendar,

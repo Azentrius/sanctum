@@ -3,10 +3,10 @@ const plugin = vi.hoisted(() => ({
   checkPermissions: vi.fn(),
   requestPermissions: vi.fn(),
   getSyncOverview: vi.fn(),
-  setAccountSync: vi.fn(),
   setCalendarSync: vi.fn(),
   setSyncInterval: vi.fn(),
   syncNow: vi.fn(),
+  syncAll: vi.fn(),
 }));
 
 vi.mock('@capacitor/core', () => ({
@@ -36,7 +36,7 @@ beforeEach(() => {
     fn.mockReset();
   }
   plugin.getSyncOverview.mockResolvedValue({ intervalMinutes: 15, permission: true, accounts: [] });
-  plugin.setAccountSync.mockResolvedValue(undefined);
+  plugin.syncAll.mockResolvedValue(undefined);
   reconcile = vi.fn().mockResolvedValue(undefined);
 
   TestBed.configureTestingModule({
@@ -71,6 +71,7 @@ describe('NativeCalendarSyncService', () => {
 
     await expect(service.ensurePermission()).resolves.toBe(true);
     expect(plugin.requestPermissions).not.toHaveBeenCalled();
+    expect(plugin.syncAll).not.toHaveBeenCalled();
   });
 
   it('asks for calendar access and reports a refusal', async () => {
@@ -79,24 +80,15 @@ describe('NativeCalendarSyncService', () => {
 
     await expect(service.ensurePermission()).resolves.toBe(false);
     expect(plugin.requestPermissions).toHaveBeenCalledWith({ permissions: ['calendar'] });
+    expect(plugin.syncAll).not.toHaveBeenCalled();
   });
 
-  it('switches an account on only with calendar access', async () => {
-    plugin.checkPermissions.mockResolvedValue({ calendar: 'denied' });
-    plugin.requestPermissions.mockResolvedValue({ calendar: 'denied' });
+  it('starts the sync of every account once access is granted', async () => {
+    plugin.checkPermissions.mockResolvedValue({ calendar: 'prompt' });
+    plugin.requestPermissions.mockResolvedValue({ calendar: 'granted' });
 
-    await expect(service.setAccountSync('a', true)).resolves.toBe(false);
-    expect(plugin.setAccountSync).not.toHaveBeenCalled();
-
-    plugin.checkPermissions.mockResolvedValue({ calendar: 'granted' });
-    await expect(service.setAccountSync('a', true)).resolves.toBe(true);
-    expect(plugin.setAccountSync).toHaveBeenCalledWith({ accountId: 'a', enabled: true });
-  });
-
-  it('switches an account off without asking for access', async () => {
-    await expect(service.setAccountSync('a', false)).resolves.toBe(true);
-    expect(plugin.checkPermissions).not.toHaveBeenCalled();
-    expect(plugin.setAccountSync).toHaveBeenCalledWith({ accountId: 'a', enabled: false });
+    await expect(service.ensurePermission()).resolves.toBe(true);
+    expect(plugin.syncAll).toHaveBeenCalledTimes(1);
   });
 
   it('passes calendar switches, the interval and sync requests on', async () => {
@@ -114,14 +106,8 @@ describe('NativeCalendarSyncService', () => {
   });
 
   it('drops changes not uploaded yet only when told to', async () => {
-    await service.setAccountSync('a', false, true);
     await service.setCalendarSync('a', 7, false, true);
 
-    expect(plugin.setAccountSync).toHaveBeenCalledWith({
-      accountId: 'a',
-      enabled: false,
-      discardChanges: true,
-    });
     expect(plugin.setCalendarSync).toHaveBeenCalledWith({
       accountId: 'a',
       calendarId: 7,

@@ -3,6 +3,10 @@ package de.azentrius.sanctum.sync
 
 import android.Manifest
 import android.accounts.Account
+import android.content.ContentResolver
+import android.database.ContentObserver
+import android.os.Handler
+import android.os.Looper
 import android.provider.CalendarContract
 import com.getcapacitor.JSArray
 import com.getcapacitor.JSObject
@@ -21,13 +25,15 @@ private const val CALENDAR = "calendar"
  * its app password and removes it again; the native side keeps the Android account and the
  * credentials. No method returns a password.
  *
- * The app also switches the calendar sync per account and per calendar, sets the interval and
- * asks for a sync now. Calendar access is a runtime permission ("calendar"), requested through
- * Capacitor's `requestPermissions`.
+ * Every registered account syncs its calendars into the Android calendar, and Sanctum's own
+ * calendar reads and writes them there ([DeviceEvents]). The app switches single calendars, sets
+ * the interval and asks for a sync now. Calendar access is a runtime permission ("calendar"),
+ * requested through Capacitor's `requestPermissions`. While the app runs, it hears of every change
+ * in the Android calendar through the event `calendarChanged`.
  *
- * Switching a calendar or an account off removes its events from the device. When some of them
- * were changed on the device and not uploaded yet, the call is rejected with `PENDING_CHANGES`
- * unless `discardChanges` is true.
+ * Switching a calendar off removes its events from the device. When some of them were changed on
+ * the device and not uploaded yet, the call is rejected with `PENDING_CHANGES` unless
+ * `discardChanges` is true.
  */
 @CapacitorPlugin(
     name = "SanctumSync",
@@ -44,13 +50,34 @@ class SanctumSyncPlugin : Plugin() {
     private val credentials by lazy { CredentialStore.forContext(context) }
     private val settings by lazy { SyncSettings.forContext(context) }
     private val scheduler by lazy { SyncScheduler(context) }
+    private val events by lazy { DeviceEvents(context) }
+
+    private val mainHandler = Handler(Looper.getMainLooper())
+    private var observer: ContentObserver? = null
+    private val notifyChanged = Runnable { notifyListeners("calendarChanged", JSObject()) }
+
+    /** Every account syncs; this also switches on accounts of versions where that was a choice. */
+    override fun load() {
+        for ((account, accountId) in accounts.list()) {
+            if (accountId != null) startSync(account, accountId, syncNow = false)
+        }
+    }
+
+    override fun handleOnDestroy() {
+        observer?.let { context.contentResolver.unregisterContentObserver(it) }
+        observer = null
+        mainHandler.removeCallbacks(notifyChanged)
+    }
 
     @PluginMethod
     fun getAvailability(call: PluginCall) {
         call.resolve(JSObject().put("available", true).put("version", BRIDGE_VERSION))
     }
 
-    /** Creates or updates the Android account of a Sanctum account and stores its app password. */
+    /**
+     * Creates or updates the Android account of a Sanctum account, stores its app password and
+     * starts its sync.
+     */
     @PluginMethod
     fun registerAccount(call: PluginCall) {
         val account = try {
@@ -72,10 +99,9 @@ class SanctumSyncPlugin : Plugin() {
             val androidAccount = accounts.ensure(account)
             credentials.put(account.accountId, appPassword)
             // A new app password: a rejected one no longer holds the sync back
-            if (settings.lastOutcome(account.accountId)?.code == SyncOutcome.Code.AUTH) {
-                settings.clearLastOutcome(account.accountId)
-                if (settings.isEnabled(account.accountId)) scheduler.syncNow(account.accountId)
-            }
+            val wasRejected = settings.lastOutcome(account.accountId)?.code == SyncOutcome.Code.AUTH
+            if (wasRejected) settings.clearLastOutcome(account.accountId)
+            startSync(androidAccount, account.accountId, syncNow = wasRejected)
             call.resolve(JSObject().put("name", androidAccount.name))
         } catch (e: Exception) {
             call.reject("The account could not be registered", "REGISTER_FAILED", e)
@@ -118,7 +144,7 @@ class SanctumSyncPlugin : Plugin() {
 
     /**
      * Everything the sync settings show: the interval, whether calendar access is granted, and per
-     * account whether it syncs, whether a sync runs, how the last one ended and its calendars.
+     * account whether a sync runs, how the last one ended and its calendars.
      */
     @PluginMethod
     fun getSyncOverview(call: PluginCall) {
@@ -130,7 +156,6 @@ class SanctumSyncPlugin : Plugin() {
                 val item = JSObject()
                 item.put("accountId", accountId)
                 item.put("name", androidAccount.name)
-                item.put("enabled", settings.isEnabled(accountId))
                 item.put("running", AccountSync.isActive(accountId) || scheduler.isRunning(accountId))
                 settings.lastOutcome(accountId)?.let { outcome ->
                     val last = JSObject()
@@ -147,7 +172,7 @@ class SanctumSyncPlugin : Plugin() {
                             val entry = JSObject()
                             entry.put("id", calendar.id)
                             entry.put("name", calendar.displayName ?: CalendarPlan.nameFromUrl(calendar.url))
-                            entry.put("color", calendar.color?.let { "#%06X".format(it and 0xFFFFFF) })
+                            entry.put("color", calendar.color?.let { hexColor(it) })
                             entry.put("syncEnabled", calendar.syncEnabled)
                             entry.put("readOnly", !calendar.writable)
                             calendars.put(entry)
@@ -167,66 +192,11 @@ class SanctumSyncPlugin : Plugin() {
         }
     }
 
-    /** Switches the calendar sync of an account; switching it off removes its calendars from the device. */
-    @PluginMethod
-    fun setAccountSync(call: PluginCall) {
-        val accountId = call.getString("accountId")
-        val enabled = call.getBoolean("enabled")
-        if (accountId.isNullOrEmpty() || enabled == null) {
-            call.reject("Missing accountId or enabled", "INVALID_ARGUMENT")
-            return
-        }
-        val androidAccount = accounts.find(accountId)
-        if (androidAccount == null) {
-            call.reject("Unknown account", "NOT_FOUND")
-            return
-        }
-        if (enabled && !hasCalendarPermission()) {
-            call.reject("Calendar access is not granted", "PERMISSION_REQUIRED")
-            return
-        }
-        val discard = call.getBoolean("discardChanges") ?: false
-        try {
-            if (enabled) {
-                settings.setEnabled(accountId, true)
-                settings.clearLastOutcome(accountId)
-                SyncFramework.enableUploads(androidAccount)
-                scheduler.schedule(accountId, settings.intervalMinutes)
-                scheduler.syncNow(accountId)
-            } else {
-                val permission = hasCalendarPermission()
-                val switchedOff = runBlocking {
-                    AccountSync.withAccountLock(accountId) {
-                        val pending = permission && !discard &&
-                            (withCalendars(androidAccount) { it.pendingChanges() } ?: 0) > 0
-                        if (!pending) {
-                            // Inside the lock, so a sync waiting for it finds the account switched off
-                            settings.setEnabled(accountId, false)
-                            if (permission) withCalendars(androidAccount) { it.deleteAll() }
-                        }
-                        !pending
-                    }
-                }
-                if (!switchedOff) {
-                    call.reject("Changes on the device are not uploaded yet", "PENDING_CHANGES")
-                    return
-                }
-                SyncFramework.disableUploads(androidAccount)
-                scheduler.cancel(accountId)
-                settings.clearLastOutcome(accountId)
-            }
-            call.resolve()
-        } catch (e: Exception) {
-            call.reject("The sync could not be switched", "SWITCH_FAILED", e)
-        }
-    }
-
     /** Switches one calendar; switching it off removes its events from the device. */
     @PluginMethod
     fun setCalendarSync(call: PluginCall) {
         val accountId = call.getString("accountId")
-        // getLong() misses small numbers, which arrive as Integer
-        val calendarId = (call.data.opt("calendarId") as? Number)?.toLong()
+        val calendarId = longArgument(call, "calendarId")
         val enabled = call.getBoolean("enabled")
         if (accountId.isNullOrEmpty() || calendarId == null || enabled == null) {
             call.reject("Missing accountId, calendarId or enabled", "INVALID_ARGUMENT")
@@ -292,6 +262,218 @@ class SanctumSyncPlugin : Plugin() {
         call.resolve()
     }
 
+    /** Syncs every account now, for example right after calendar access was granted. */
+    @PluginMethod
+    fun syncAll(call: PluginCall) {
+        for ((account, accountId) in accounts.list()) {
+            if (accountId != null) startSync(account, accountId, syncNow = true)
+        }
+        call.resolve()
+    }
+
+    /** The calendars of all accounts that sync, for Sanctum's own calendar. */
+    @PluginMethod
+    fun listCalendars(call: PluginCall) {
+        if (!requirePermission(call)) return
+        try {
+            val list = JSArray()
+            for (calendar in events.calendars()) {
+                list.put(
+                    JSObject()
+                        .put("id", calendar.id)
+                        .put("accountId", calendar.accountId)
+                        .put("url", calendar.url)
+                        .put("name", calendar.name)
+                        .put("color", calendar.color?.let { hexColor(it) })
+                        .put("readOnly", !calendar.writable),
+                )
+            }
+            call.resolve(JSObject().put("calendars", list))
+        } catch (e: Exception) {
+            call.reject("The calendars could not be read", "READ_FAILED", e)
+        }
+    }
+
+    /** The dates of all events between `from` and `to` (milliseconds), repetitions expanded. */
+    @PluginMethod
+    fun listEvents(call: PluginCall) {
+        val from = longArgument(call, "from")
+        val to = longArgument(call, "to")
+        if (from == null || to == null || to <= from) {
+            call.reject("Missing or wrong from and to", "INVALID_ARGUMENT")
+            return
+        }
+        if (!requirePermission(call)) return
+        try {
+            val list = JSArray()
+            for (instance in events.instances(from, to)) list.put(instanceJson(instance))
+            call.resolve(JSObject().put("events", list))
+        } catch (e: Exception) {
+            call.reject("The events could not be read", "READ_FAILED", e)
+        }
+    }
+
+    /** One date of an event: `eventId` with its `begin`. */
+    @PluginMethod
+    fun getEvent(call: PluginCall) {
+        if (!requirePermission(call)) return
+        val instance = findInstance(call) ?: return
+        call.resolve(JSObject().put("event", instanceJson(instance)))
+    }
+
+    @PluginMethod
+    fun createEvent(call: PluginCall) {
+        val calendarId = longArgument(call, "calendarId")
+        val fields = fieldsOf(call)
+        if (calendarId == null || fields == null) {
+            call.reject("Missing calendarId or event fields", "INVALID_ARGUMENT")
+            return
+        }
+        if (!requirePermission(call)) return
+        write(call) {
+            val eventId = events.create(calendarId, fields)
+            call.resolve(JSObject().put("eventId", eventId))
+        }
+    }
+
+    /** Changes the date `eventId`/`begin`; `scope` "single" or "all" for a repeating event. */
+    @PluginMethod
+    fun updateEvent(call: PluginCall) {
+        val fields = fieldsOf(call)
+        val scope = scopeOf(call)
+        if (fields == null || scope == null) {
+            call.reject("Missing event fields or scope", "INVALID_ARGUMENT")
+            return
+        }
+        if (!requirePermission(call)) return
+        val instance = findInstance(call) ?: return
+        write(call) {
+            events.update(instance, fields, scope)
+            call.resolve()
+        }
+    }
+
+    @PluginMethod
+    fun deleteEvent(call: PluginCall) {
+        val scope = scopeOf(call)
+        if (scope == null) {
+            call.reject("Missing scope", "INVALID_ARGUMENT")
+            return
+        }
+        if (!requirePermission(call)) return
+        val instance = findInstance(call) ?: return
+        write(call) {
+            events.delete(instance, scope)
+            call.resolve()
+        }
+    }
+
+    private fun startSync(account: Account, accountId: String, syncNow: Boolean) {
+        val newlyEnabled = !settings.isEnabled(accountId)
+        if (newlyEnabled) {
+            settings.setEnabled(accountId, true)
+            scheduler.schedule(accountId, settings.intervalMinutes)
+        }
+        SyncFramework.enableUploads(account)
+        if (syncNow || newlyEnabled) scheduler.syncNow(accountId)
+    }
+
+    /**
+     * A write from Sanctum's calendar. The sync framework uploads it; when the user switched off
+     * the automatic sync of Android, the background job does.
+     */
+    private fun write(call: PluginCall, block: () -> Unit) {
+        try {
+            block()
+            if (!ContentResolver.getMasterSyncAutomatically()) {
+                for ((_, accountId) in accounts.list()) {
+                    if (accountId != null) scheduler.syncNow(accountId)
+                }
+            }
+        } catch (_: ReadOnlyCalendarException) {
+            call.reject("The calendar is read-only", "READ_ONLY")
+        } catch (e: Exception) {
+            call.reject("The event could not be saved", "WRITE_FAILED", e)
+        }
+    }
+
+    private fun findInstance(call: PluginCall): DeviceInstance? {
+        val eventId = longArgument(call, "eventId")
+        val begin = longArgument(call, "begin")
+        if (eventId == null || begin == null) {
+            call.reject("Missing eventId or begin", "INVALID_ARGUMENT")
+            return null
+        }
+        val instance = try {
+            events.instance(eventId, begin)
+        } catch (e: Exception) {
+            call.reject("The event could not be read", "READ_FAILED", e)
+            return null
+        }
+        if (instance == null) call.reject("Unknown event", "NOT_FOUND")
+        return instance
+    }
+
+    private fun fieldsOf(call: PluginCall): EventFields? {
+        val begin = longArgument(call, "start") ?: return null
+        val end = longArgument(call, "end") ?: return null
+        if (end < begin) return null
+        return EventFields(
+            title = call.getString("title").orEmpty(),
+            description = call.getString("description")?.takeIf { it.isNotEmpty() },
+            begin = begin,
+            end = end,
+            allDay = call.getBoolean("allDay") ?: false,
+            timeZone = call.getString("timeZone")?.takeIf { it.isNotEmpty() } ?: java.util.TimeZone.getDefault().id,
+        )
+    }
+
+    private fun scopeOf(call: PluginCall): EventScope? = when (call.getString("scope")) {
+        "single" -> EventScope.SINGLE
+        "all" -> EventScope.ALL
+        else -> null
+    }
+
+    private fun instanceJson(instance: DeviceInstance): JSObject = JSObject()
+        .put("eventId", instance.eventId)
+        .put("begin", instance.begin)
+        .put("end", instance.end)
+        .put("allDay", instance.allDay)
+        .put("title", instance.title)
+        .put("location", instance.location)
+        .put("description", instance.description)
+        .put("calendarId", instance.calendarId)
+        .put("color", instance.color?.let { hexColor(it) })
+        .put("timeZone", instance.timeZone)
+        .put("uid", instance.uid)
+        .put("seriesId", instance.seriesId)
+
+    /**
+     * Calendar access granted: from now on the app hears of changes in the Android calendar,
+     * debounced, as long as it runs.
+     */
+    private fun requirePermission(call: PluginCall): Boolean {
+        if (!hasCalendarPermission()) {
+            call.reject("Calendar access is not granted", "PERMISSION_REQUIRED")
+            return false
+        }
+        if (observer == null) {
+            val created = object : ContentObserver(mainHandler) {
+                override fun onChange(selfChange: Boolean) {
+                    mainHandler.removeCallbacks(notifyChanged)
+                    mainHandler.postDelayed(notifyChanged, CHANGE_DELAY_MS)
+                }
+            }
+            try {
+                context.contentResolver.registerContentObserver(CalendarContract.CONTENT_URI, true, created)
+                observer = created
+            } catch (_: SecurityException) {
+                // Tried again with the next call
+            }
+        }
+        return true
+    }
+
     private fun hasCalendarPermission(): Boolean =
         getPermissionState(CALENDAR) == PermissionState.GRANTED
 
@@ -307,6 +489,14 @@ class SanctumSyncPlugin : Plugin() {
     private enum class SwitchResult { DONE, PENDING, NOT_FOUND }
 
     private companion object {
-        const val BRIDGE_VERSION = 3
+        const val BRIDGE_VERSION = 4
+
+        /** Several rows change at once in a sync; one event for all of them. */
+        const val CHANGE_DELAY_MS = 500L
+
+        /** getLong() misses small numbers, which arrive as Integer. */
+        fun longArgument(call: PluginCall, name: String): Long? = (call.data.opt(name) as? Number)?.toLong()
+
+        fun hexColor(argb: Int): String = "#%06X".format(argb and 0xFFFFFF)
     }
 }

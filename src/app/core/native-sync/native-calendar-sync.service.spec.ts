@@ -11,6 +11,11 @@ const plugin = vi.hoisted(() => ({
 
 vi.mock('./sanctum-sync.plugin', () => ({ SanctumSync: plugin }));
 
+// Only its DI token is needed here; the real module would load the account services.
+vi.mock('./native-sync-accounts.service', () => ({
+  NativeSyncAccountsService: class NativeSyncAccountsService {},
+}));
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 

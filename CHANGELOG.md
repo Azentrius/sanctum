@@ -2,7 +2,8 @@
 
 ## 0.9.0 – 2026-11-01
 
-Sanctum follows the Azentrius design system and has its new icon.
+Sanctum follows the Azentrius design system, has its new icon and brings the security fixes of its
+libraries.
 
 - Colours, type and controls come from the design system: its dark and light themes, DM Sans, pill
   buttons, flat cards and lists, tabs with a line under the selected one, no ripple on touch. The
@@ -12,6 +13,15 @@ Sanctum follows the Azentrius design system and has its new icon.
 - The sign-in and lock screens show the name as "Sanctum." with the dot in the signature colour.
 - The README and the roadmap describe Sanctum as what it is meant to become: Nextcloud on Android in
   one app, starting with the calendar.
+- Security updates: Capacitor 8.6 no longer lets remote content load at the app's own origin through
+  its proxy path ([GHSA-rvm3-566m-v7fv](https://github.com/advisories/GHSA-rvm3-566m-v7fv)), and
+  Angular 21.2.25 fixes the cross-site scripting through event-handler attributes in translated
+  templates ([GHSA-jj27-h5hq-8x99](https://github.com/advisories/GHSA-jj27-h5hq-8x99)). The
+  Capacitor plugins and the other libraries are on their current minor and patch releases.
+- The web part is built with Angular's application builder (esbuild) instead of webpack, and
+  packages nothing used any more are gone: old fonts, test reporters, lint plugins and an icon
+  generator. Together this closes every security advisory that was open for Sanctum's dependencies;
+  most of them concerned build and test tools that never ship in the app.
 
 ## 0.8.0 – 2026-10-31
 

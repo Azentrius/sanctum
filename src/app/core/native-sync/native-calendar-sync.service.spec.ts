@@ -9,11 +9,17 @@ const plugin = vi.hoisted(() => ({
   syncNow: vi.fn(),
 }));
 
-vi.mock('./sanctum-sync.plugin', () => ({ SanctumSync: plugin }));
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform: vi.fn(() => true), getPlatform: vi.fn(() => 'android') },
+  registerPlugin: vi.fn(() => plugin),
+}));
 
-// Only its DI token is needed here; the real module would load the account services.
-vi.mock('./native-sync-accounts.service', () => ({
-  NativeSyncAccountsService: class NativeSyncAccountsService {},
+// observability.ts (pulled in through the account services) loads '@sentry/capacitor', whose
+// module init would run against this spec's minimal Capacitor mock.
+vi.mock('@sentry/capacitor', () => ({
+  init: vi.fn(),
+  setTag: vi.fn(),
+  close: vi.fn(async () => true),
 }));
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';

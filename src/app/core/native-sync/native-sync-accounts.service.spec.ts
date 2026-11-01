@@ -13,9 +13,13 @@ vi.mock('@capacitor/core', () => ({
   registerPlugin: vi.fn(() => plugin),
 }));
 
-// Only their DI tokens are needed here; the real modules would load half of the app's plugins.
-vi.mock('../accounts/account.service', () => ({ AccountService: class AccountService {} }));
-vi.mock('../auth/token.service', () => ({ TokenService: class TokenService {} }));
+// observability.ts (pulled in through the account services) loads '@sentry/capacitor', whose
+// module init would run against this spec's minimal Capacitor mock.
+vi.mock('@sentry/capacitor', () => ({
+  init: vi.fn(),
+  setTag: vi.fn(),
+  close: vi.fn(async () => true),
+}));
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';

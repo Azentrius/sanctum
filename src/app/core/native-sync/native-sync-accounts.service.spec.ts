@@ -8,15 +8,14 @@ const plugin = vi.hoisted(() => ({
   listAccounts: vi.fn(),
 }));
 
-// Partial mock: the services imported for their DI tokens still find the rest of @capacitor/core.
-vi.mock('@capacitor/core', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('@capacitor/core')>();
-  return {
-    ...actual,
-    Capacitor: { ...actual.Capacitor, isNativePlatform, getPlatform },
-    registerPlugin: vi.fn(() => plugin),
-  };
-});
+vi.mock('@capacitor/core', () => ({
+  Capacitor: { isNativePlatform, getPlatform },
+  registerPlugin: vi.fn(() => plugin),
+}));
+
+// Only their DI tokens are needed here; the real modules would load half of the app's plugins.
+vi.mock('../accounts/account.service', () => ({ AccountService: class AccountService {} }));
+vi.mock('../auth/token.service', () => ({ TokenService: class TokenService {} }));
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';

@@ -122,8 +122,9 @@ How 3b is built:
 - **App:** "Calendar sync" in the settings menu of the Android app: calendar access, the interval,
   per account the switch, the status of the last sync and "Sync now", and per calendar its switch,
   with the notes on privacy, read-only calendars and DAVx5.
-- **Still open in 3b:** the instrumented tests against a Nextcloud container in CI and the checks
-  on the device.
+- **Tests against Nextcloud:** the CI job `sync` (see below) runs `NextcloudSyncTest` on an
+  emulator.
+- **Still open in 3b:** the checks on the device.
 
 ### 3c The phone to Nextcloud
 
@@ -150,9 +151,17 @@ How 3b is built:
 ## Tests in CI
 
 - JVM unit tests of the Kotlin code run in the job `android`.
-- From 3b, a separate job starts an Android emulator (KVM on GitHub's Linux runners) and a Nextcloud
-  container and runs instrumented tests of the sync against it. A missing emulator or server is a
-  failed job, never a passed one.
+- The job `sync` starts Nextcloud (SQLite, pinned image) behind an nginx proxy that speaks TLS with
+  a certificate made for the run (`scripts/start-ci-nextcloud.sh`), then an Android emulator (API 34,
+  KVM on GitHub's Linux runners) and runs the instrumented tests in `android/app/src/androidTest/`
+  with `connectedFossDebugAndroidTest`. The emulator reaches the server as `10.0.2.2`; the server's
+  address, user, password and certificate reach the tests as instrumentation arguments, and the
+  tests trust only that certificate. A missing emulator, server or argument fails the job, never
+  passes it.
+- `NextcloudSyncTest` covers discovery (a task list is left out), the first download with an
+  all-day event and a weekly event with a moved instance, a repeated sync without duplicates,
+  changes and deletions on the server, a sync token the server rejects, switching a calendar off
+  and on, a calendar removed on the server, and a rejected app password.
 
 ## Living with DAVx5 during the switch
 

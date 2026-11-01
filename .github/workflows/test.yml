@@ -83,3 +83,60 @@ jobs:
           path: |
             android/app/build/outputs/apk/play/debug/*.apk
             android/app/build/outputs/apk/foss/debug/*.apk
+
+  # The native sync against a real Nextcloud: instrumented tests on an emulator, with Nextcloud and a
+  # TLS proxy in Docker. A server or emulator that does not come up fails the job.
+  sync:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+      - name: Install the pinned Android SDK components
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;35.0.0"'
+      - name: Install from the lockfile
+        run: npm ci --no-audit --no-fund
+      - name: Web build and Capacitor sync
+        run: |
+          npm run build
+          npx cap sync android
+      - name: Start Nextcloud behind TLS
+        run: bash scripts/start-ci-nextcloud.sh
+      - name: Let the emulator use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Sync tests on an emulator
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d # v2.38.0
+        with:
+          api-level: 34
+          target: default
+          arch: x86_64
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          working-directory: android
+          script: bash ./gradlew --no-daemon connectedFossDebugAndroidTest -Pandroid.testInstrumentationRunnerArguments.serverUrl="$NC_URL" -Pandroid.testInstrumentationRunnerArguments.serverUser="$NC_USER" -Pandroid.testInstrumentationRunnerArguments.serverPassword="$NC_PASSWORD" -Pandroid.testInstrumentationRunnerArguments.serverCert="$NC_CERT"
+      - name: Nextcloud log
+        if: failure()
+        run: docker logs nextcloud 2>&1 | tail -100
+      - name: Keep the test reports
+        if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: sanctum-sync-test-reports
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            android/app/build/reports/androidTests/
+            android/app/build/outputs/androidTest-results/

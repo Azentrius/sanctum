@@ -7,6 +7,7 @@ import io.ktor.client.engine.okhttp.OkHttp
 import okhttp3.Credentials
 import okhttp3.HttpUrl
 import okhttp3.Interceptor
+import okhttp3.OkHttpClient
 import okhttp3.Response
 import java.net.URI
 
@@ -20,7 +21,12 @@ internal object SyncHttp {
     private const val CONNECT_TIMEOUT_MS = 30_000
     private const val READ_TIMEOUT_MS = 120_000
 
-    fun client(account: SanctumAccount, appPassword: String, userAgent: String): HttpClient {
+    fun client(
+        account: SanctumAccount,
+        appPassword: String,
+        userAgent: String,
+        configure: OkHttpClient.Builder.() -> Unit = {},
+    ): HttpClient {
         val okHttp = CertPinStore.getInstance()
             .newClientBuilder(CONNECT_TIMEOUT_MS, READ_TIMEOUT_MS)
             .followRedirects(false)
@@ -32,6 +38,7 @@ internal object SyncHttp {
                     userAgent = userAgent,
                 ),
             )
+            .apply(configure)
             .build()
         return HttpClient(OkHttp) {
             followRedirects = false

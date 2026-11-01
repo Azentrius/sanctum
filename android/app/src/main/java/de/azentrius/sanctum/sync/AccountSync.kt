@@ -13,6 +13,7 @@ import de.azentrius.sanctum.CertPinStore
 import io.ktor.http.Url
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.OkHttpClient
 import java.io.IOException
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
@@ -24,7 +25,11 @@ import kotlin.coroutines.cancellation.CancellationException
  * One sync of one Sanctum account: its calendars from the server, then the events of every
  * calendar that syncs. Returns how it ended instead of throwing; the caller stores the outcome.
  */
-internal class AccountSync(private val context: Context) {
+internal class AccountSync(
+    private val context: Context,
+    /** Changes to the HTTP client; the instrumented tests trust their test server's certificate here. */
+    private val configureHttp: OkHttpClient.Builder.() -> Unit = {},
+) {
 
     private val logger = Logger.getLogger(javaClass.name)
 
@@ -39,7 +44,7 @@ internal class AccountSync(private val context: Context) {
             ?: return outcome(SyncOutcome.Code.ERROR)
 
         return try {
-            SyncHttp.client(account, appPassword, userAgent()).use { http ->
+            SyncHttp.client(account, appPassword, userAgent(), configureHttp).use { http ->
                 val calendars = LocalCalendars(androidAccount, client)
                 val remote = CalendarDiscovery(http).discover(account)
                 var changes = 0

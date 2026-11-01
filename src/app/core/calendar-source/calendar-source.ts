@@ -16,6 +16,14 @@ export interface EventDraft {
   end: Date;
   allDay: boolean;
   tzid: string;
+  /** The calendar the event is in, or moves to. */
+  calendarId: string;
+  /** The fields below only where {@link CalendarSource.editsDetails}. */
+  location: string;
+  /** RFC 5545 rule, null for a single event. */
+  rrule: string | null;
+  /** Reminders in minutes before the start. */
+  reminders: number[];
 }
 
 /**
@@ -25,6 +33,11 @@ export interface EventDraft {
 export interface CalendarSource {
   /** Whether creating and changing events needs a connection to the server. */
   readonly writesNeedNetwork: boolean;
+  /**
+   * Whether the editor may set location, repetition and reminders and move an event to another
+   * calendar.
+   */
+  readonly editsDetails: boolean;
   /** Calendars that hold events, with the user's choice whether the calendar screen shows them. */
   readonly calendars: Observable<AccountCalendar[]>;
   /** Emits when the events may have changed: after a sync, a write or a change of the choice. */

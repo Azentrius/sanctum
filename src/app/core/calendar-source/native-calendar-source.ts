@@ -31,6 +31,7 @@ export class NativeCalendarSource implements CalendarSource {
   private listening = false;
 
   readonly writesNeedNetwork = false;
+  readonly editsDetails = true;
   readonly calendars = this.calendars$.asObservable();
   readonly changed = this.changed$.asObservable();
   readonly needsAccess = this.needsAccess$.asObservable();
@@ -120,10 +121,12 @@ export class NativeCalendarSource implements CalendarSource {
 
   async updateEvent(event: CalendarEvent, draft: EventDraft, options: EventWriteOptions): Promise<void> {
     const ref = this.refOf(event);
+    const target = this.calendars$.value.find((calendar) => calendar.id === draft.calendarId);
     await SanctumSync.updateEvent({
       eventId: ref.eventId,
       begin: ref.begin,
       scope: options.scope ?? 'all',
+      ...(target?.nativeId !== undefined ? { calendarId: target.nativeId } : {}),
       ...toDeviceFields(draft),
     });
     this.changed$.next();

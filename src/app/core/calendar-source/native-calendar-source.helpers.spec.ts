@@ -2,6 +2,7 @@
 import { describe, expect, it } from 'vitest';
 
 import type { DeviceCalendar, DeviceEvent } from '../native-sync/sanctum-sync.plugin';
+import type { EventDraft } from './calendar-source';
 import {
   nativeEventId,
   parseNativeEventId,
@@ -20,6 +21,20 @@ const deviceCalendar: DeviceCalendar = {
 };
 
 const calendar = toAccountCalendar(deviceCalendar, true);
+
+const draft = (overrides: Partial<EventDraft> = {}): EventDraft => ({
+  title: 'Dentist',
+  description: '',
+  start: new Date(Date.UTC(2026, 10, 14, 9)),
+  end: new Date(Date.UTC(2026, 10, 14, 10)),
+  allDay: false,
+  tzid: 'Europe/Berlin',
+  calendarId: deviceCalendar.url,
+  location: '',
+  rrule: null,
+  reminders: [],
+  ...overrides,
+});
 
 const deviceEvent = (overrides: Partial<DeviceEvent> = {}): DeviceEvent => ({
   eventId: 7,
@@ -82,46 +97,56 @@ describe('native calendar helpers', () => {
     expect(toCalendarEvent(deviceEvent({ seriesId: 4 }), calendar).native?.seriesId).toBe(4);
   });
 
+  it('takes over the rule, the location and the reminders, these in seconds before the start', () => {
+    const event = toCalendarEvent(
+      deviceEvent({ rrule: 'FREQ=WEEKLY', location: 'Practice', reminders: [15, -540] }),
+      calendar,
+    );
+    expect(event.recurrence).toBe('FREQ=WEEKLY');
+    expect(event.location).toBe('Practice');
+    expect(event.reminders).toEqual([-900, 32_400]);
+    expect(toCalendarEvent(deviceEvent(), calendar).reminders).toBeUndefined();
+  });
+
   it('writes timed events as they are', () => {
-    const start = new Date(Date.UTC(2026, 10, 14, 9));
-    const fields = toDeviceFields({
-      title: 'Dentist',
-      description: '',
-      start,
-      end: new Date(start.getTime() + 3_600_000),
-      allDay: false,
-      tzid: 'Europe/Berlin',
-    });
+    const fields = toDeviceFields(draft());
     expect(fields).toEqual({
       title: 'Dentist',
-      start: start.getTime(),
-      end: start.getTime() + 3_600_000,
+      start: Date.UTC(2026, 10, 14, 9),
+      end: Date.UTC(2026, 10, 14, 10),
       allDay: false,
       timeZone: 'Europe/Berlin',
+      rrule: null,
+      reminders: [],
     });
   });
 
+  it('writes the location, the rule and the reminders', () => {
+    const fields = toDeviceFields(
+      draft({ location: 'Practice', rrule: 'FREQ=MONTHLY', reminders: [10, 60] }),
+    );
+    expect(fields.location).toBe('Practice');
+    expect(fields.rrule).toBe('FREQ=MONTHLY');
+    expect(fields.reminders).toEqual([10, 60]);
+  });
+
   it('writes all-day events from midnight UTC, at least one day long', () => {
-    const fields = toDeviceFields({
-      title: 'Holiday',
-      description: 'Beach',
-      start: new Date(2026, 10, 14, 15, 30),
-      end: new Date(2026, 10, 14),
-      allDay: true,
-      tzid: 'Europe/Berlin',
-    });
+    const fields = toDeviceFields(
+      draft({
+        title: 'Holiday',
+        description: 'Beach',
+        start: new Date(2026, 10, 14, 15, 30),
+        end: new Date(2026, 10, 14),
+        allDay: true,
+      }),
+    );
     expect(fields.start).toBe(Date.UTC(2026, 10, 14));
     expect(fields.end).toBe(Date.UTC(2026, 10, 15));
     expect(fields.description).toBe('Beach');
 
-    const twoDays = toDeviceFields({
-      title: 'Trip',
-      description: '',
-      start: new Date(2026, 10, 14),
-      end: new Date(2026, 10, 16),
-      allDay: true,
-      tzid: 'Europe/Berlin',
-    });
+    const twoDays = toDeviceFields(
+      draft({ start: new Date(2026, 10, 14), end: new Date(2026, 10, 16), allDay: true }),
+    );
     expect(twoDays.end - twoDays.start).toBe(2 * 86_400_000);
   });
 });

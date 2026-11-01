@@ -21,6 +21,16 @@ import {
   resolveRecurrenceId,
   type SeriesEditScope,
 } from '../series-scope.util';
+import {
+  Label,
+  REPEAT_CHOICES,
+  RepeatChoice,
+  RepeatEnd,
+  addableReminders,
+  buildRule,
+  parseRule,
+  reminderLabel,
+} from './event-details.helpers';
 
 interface EventFormValue {
   title: string;
@@ -30,6 +40,11 @@ interface EventFormValue {
   calendarId: string;
   description: string;
   tzid: string;
+  location: string;
+  repeat: RepeatChoice;
+  repeatEnd: RepeatEnd['kind'];
+  repeatUntil: string;
+  repeatCount: number;
 }
 
 /**
@@ -60,6 +75,11 @@ interface EventFormValue {
   calendars: AccountCalendar[] = [];
   /** The edited event is in a calendar the user may only read. */
   readOnly = false;
+  /** Location, repetition, reminders and moving to another calendar (Android). */
+  readonly details = this.source.editsDetails;
+  repeatChoices: readonly RepeatChoice[] = REPEAT_CHOICES;
+  /** Reminders in minutes before the start. */
+  reminders: number[] = [];
 
   get writesEnabled(): boolean {
     return (!this.source.writesNeedNetwork || this.connectivity.isOnline()) && !this.readOnly;
@@ -93,6 +113,16 @@ interface EventFormValue {
       calendarId: ['', Validators.required],
       description: [''],
       tzid: [Intl.DateTimeFormat().resolvedOptions().timeZone],
+      location: [''],
+      repeat: ['none' as RepeatChoice],
+      repeatEnd: ['never' as RepeatEnd['kind']],
+      repeatUntil: [toLocalDateTimeString(defaultStart)],
+      repeatCount: [10, [Validators.min(1), Validators.max(999)]],
+    });
+
+    // Reminders of timed and all-day events count differently; a switch starts over
+    this.form.get('allDay')?.valueChanges.subscribe(() => {
+      this.reminders = [];
     });
 
     void this.loadData(id);
@@ -119,21 +149,38 @@ interface EventFormValue {
     this.readOnly = calendars.some(
       (calendar) => calendar.id === eventCalendarId && calendar.readOnly,
     );
-    if (this.isEdit) {
+    // Moving needs a source that can; it is also the whole series
+    if (this.isEdit && (!this.details || this.readOnly)) {
       this.form.get('calendarId')?.disable();
     }
 
     if (this.event) {
       const tzid = this.event.tzid;
-      this.form.patchValue({
-        title: this.event.title,
-        start: toLocalDateTimeString(this.event.start, tzid),
-        end: toLocalDateTimeString(this.event.end, tzid),
-        allDay: this.event.allDay,
-        calendarId: this.event.calendarId,
-        description: this.event.description ?? '',
-        tzid: tzid ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
-      });
+      const repeat = parseRule(this.event.recurrence, this.event.start);
+      if (repeat.choice === 'custom') {
+        this.repeatChoices = [...REPEAT_CHOICES, 'custom'];
+      }
+      this.form.patchValue(
+        {
+          title: this.event.title,
+          start: toLocalDateTimeString(this.event.start, tzid),
+          end: toLocalDateTimeString(this.event.end, tzid),
+          allDay: this.event.allDay,
+          calendarId: this.event.calendarId,
+          description: this.event.description ?? '',
+          tzid: tzid ?? Intl.DateTimeFormat().resolvedOptions().timeZone,
+          location: this.event.location ?? '',
+          repeat: repeat.choice,
+          repeatEnd: repeat.end.kind,
+          ...(repeat.end.kind === 'until'
+            ? { repeatUntil: toLocalDateTimeString(repeat.end.until) }
+            : {}),
+          ...(repeat.end.kind === 'count' ? { repeatCount: repeat.end.count } : {}),
+        },
+        { emitEvent: false },
+      );
+      // The model keeps seconds relative to the start, negative before it
+      this.reminders = (this.event.reminders ?? []).map((seconds) => Math.round(-seconds / 60));
     } else {
       this.form.patchValue({ calendarId: this.calendars[0]?.id ?? '' });
     }
@@ -141,6 +188,45 @@ interface EventFormValue {
 
   calendarColor(id: string): string {
     return this.calendars.find((calendar) => calendar.id === id)?.color ?? '#0082c9';
+  }
+
+  repeatLabel(choice: RepeatChoice): string {
+    return `EVENT.REPEAT_${choice.toUpperCase()}`;
+  }
+
+  reminderLabel(minutes: number): Label {
+    return reminderLabel(minutes, this.form.value.allDay === true);
+  }
+
+  addableReminders(): number[] {
+    return addableReminders(this.reminders, this.form.value.allDay === true);
+  }
+
+  addReminder(event: CustomEvent): void {
+    const minutes = event.detail.value as number | null;
+    if (minutes !== null && minutes !== undefined && !this.reminders.includes(minutes)) {
+      this.reminders = [...this.reminders, minutes].sort((a, b) => a - b);
+    }
+    const select = event.target as HTMLIonSelectElement | null;
+    if (select) {
+      select.value = null;
+    }
+  }
+
+  removeReminder(minutes: number): void {
+    this.reminders = this.reminders.filter((item) => item !== minutes);
+  }
+
+  /** A changed repetition or calendar of a date in a series concerns the whole series. */
+  get changesWholeSeries(): boolean {
+    if (!this.event || !isSeriesOccurrence(this.event)) {
+      return false;
+    }
+    const value = this.form.getRawValue() as EventFormValue;
+    return (
+      value.calendarId !== this.event.calendarId ||
+      this.ruleOf(value) !== (this.event.recurrence ?? null)
+    );
   }
 
   async save(): Promise<void> {
@@ -164,6 +250,10 @@ interface EventFormValue {
       end: value.allDay ? allDayEnd(start, this.event) : new Date(value.end),
       allDay: value.allDay,
       tzid: value.tzid,
+      calendarId: value.calendarId,
+      location: value.location.trim(),
+      rrule: this.ruleOf(value),
+      reminders: this.reminders,
     };
 
     try {
@@ -180,7 +270,7 @@ interface EventFormValue {
   }
 
   private async saveExistingEvent(event: CalendarEvent, draft: EventDraft): Promise<void> {
-    const scope = await this.resolveSeriesScope('edit');
+    const scope = this.changesWholeSeries ? 'all' : await this.resolveSeriesScope('edit');
     if (!scope) {
       return;
     }
@@ -194,6 +284,25 @@ interface EventFormValue {
         : { scope, skipTimeUpdate: !timeChanged };
     await this.source.updateEvent(event, draft, writeOptions);
     await this.toast(this.translate.instant('EVENT.UPDATED'), 'success');
+  }
+
+  /** The rule to save: a rule the editor cannot show stays as it was, unless another is chosen. */
+  private ruleOf(value: EventFormValue): string | null {
+    if (!this.details) {
+      return this.event?.recurrence ?? null;
+    }
+    if (value.repeat === 'custom') {
+      return this.event?.recurrence ?? null;
+    }
+    // The day only: a date alone would be read as midnight UTC
+    const [year, month, day] = value.repeatUntil.slice(0, 10).split('-').map(Number);
+    const end: RepeatEnd =
+      value.repeatEnd === 'until'
+        ? { kind: 'until', until: new Date(year, month - 1, day) }
+        : value.repeatEnd === 'count'
+          ? { kind: 'count', count: Number(value.repeatCount) || 1 }
+          : { kind: 'never' };
+    return buildRule({ choice: value.repeat, end }, value.allDay);
   }
 
   private async handleEventActionError(error: unknown): Promise<void> {

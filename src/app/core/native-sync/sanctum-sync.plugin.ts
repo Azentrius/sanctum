@@ -90,16 +90,25 @@ export interface DeviceEvent {
   uid?: string;
   /** Row of the repeating event the date belongs to; missing for a single event. */
   seriesId?: number;
+  /** The rule of the series; only from `getEvent`. */
+  rrule?: string;
+  /** Pop-up reminders in minutes before the start; only from `getEvent`. */
+  reminders?: number[];
 }
 
 /** What Sanctum's editor sets. All-day events: as in {@link DeviceEvent}. */
 export interface DeviceEventFields {
   title: string;
   description?: string;
+  location?: string;
   start: number;
   end: number;
   allDay: boolean;
   timeZone: string;
+  /** The rule of a repeating event; null for a single one. One date of a series keeps its rule. */
+  rrule: string | null;
+  /** Pop-up reminders in minutes before the start (negative: after it). */
+  reminders: number[];
 }
 
 /** For a date of a repeating event: only this date, or the whole series. */
@@ -147,8 +156,14 @@ export interface SanctumSyncPlugin {
   listEvents(options: { from: number; to: number }): Promise<{ events: DeviceEvent[] }>;
   getEvent(options: { eventId: number; begin: number }): Promise<{ event: DeviceEvent }>;
   createEvent(options: { calendarId: number } & DeviceEventFields): Promise<{ eventId: number }>;
+  /** With another `calendarId` the event, a whole series, moves there. */
   updateEvent(
-    options: { eventId: number; begin: number; scope: DeviceEventScope } & DeviceEventFields,
+    options: {
+      eventId: number;
+      begin: number;
+      scope: DeviceEventScope;
+      calendarId?: number;
+    } & DeviceEventFields,
   ): Promise<void>;
   deleteEvent(options: { eventId: number; begin: number; scope: DeviceEventScope }): Promise<void>;
   addListener(eventName: 'calendarChanged', listener: () => void): Promise<PluginListenerHandle>;

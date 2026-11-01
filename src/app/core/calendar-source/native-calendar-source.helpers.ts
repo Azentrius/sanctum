@@ -47,6 +47,9 @@ export function toCalendarEvent(event: DeviceEvent, calendar: AccountCalendar): 
     location: event.location,
     color: event.color ?? calendar.color,
     tzid: event.allDay ? undefined : event.timeZone,
+    recurrence: event.rrule,
+    // The model counts in seconds relative to the start, negative before it
+    reminders: event.reminders?.map((minutes) => -minutes * 60),
     native: { eventId: event.eventId, begin: event.begin, seriesId: event.seriesId },
   };
 }
@@ -65,10 +68,13 @@ export function toDeviceFields(draft: EventDraft): DeviceEventFields {
   return {
     title: draft.title,
     ...(draft.description ? { description: draft.description } : {}),
+    ...(draft.location ? { location: draft.location } : {}),
     start,
     end,
     allDay: draft.allDay,
     timeZone: draft.tzid,
+    rrule: draft.rrule,
+    reminders: draft.reminders,
   };
 }
 

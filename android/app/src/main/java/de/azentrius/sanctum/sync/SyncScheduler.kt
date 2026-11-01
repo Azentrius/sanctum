@@ -12,6 +12,8 @@ import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkInfo
 import androidx.work.WorkManager
 import androidx.work.workDataOf
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.runBlocking
 import java.util.concurrent.TimeUnit
 
 /**
@@ -59,10 +61,11 @@ class SyncScheduler(context: Context) {
     }
 
     /** Whether a sync of the account runs right now. Blocks briefly: not on the main thread. */
-    fun isRunning(accountId: String): Boolean =
+    fun isRunning(accountId: String): Boolean = runBlocking {
         listOf(periodicName(accountId), oneTimeName(accountId)).any { name ->
-            workManager.getWorkInfosForUniqueWork(name).get().any { it.state == WorkInfo.State.RUNNING }
+            workManager.getWorkInfosForUniqueWorkFlow(name).first().any { it.state == WorkInfo.State.RUNNING }
         }
+    }
 
     private fun periodicName(accountId: String) = "sanctum-sync:$accountId"
 

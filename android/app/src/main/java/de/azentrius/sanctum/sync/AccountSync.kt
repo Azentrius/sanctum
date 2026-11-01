@@ -15,6 +15,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.OkHttpClient
 import java.io.IOException
+import java.util.Locale
 import java.util.concurrent.ConcurrentHashMap
 import java.util.logging.Level
 import java.util.logging.Logger
@@ -22,8 +23,9 @@ import javax.net.ssl.SSLException
 import kotlin.coroutines.cancellation.CancellationException
 
 /**
- * One sync of one Sanctum account: its calendars from the server, then the events of every
- * calendar that syncs. Returns how it ended instead of throwing; the caller stores the outcome.
+ * One sync of one Sanctum account: its calendars from the server, then for every calendar that
+ * syncs the changes made on the device up and the changes on the server down. Returns how it ended
+ * instead of throwing; the caller stores the outcome.
  */
 internal class AccountSync(
     private val context: Context,
@@ -43,16 +45,28 @@ internal class AccountSync(
         val client = context.contentResolver.acquireContentProviderClient(CalendarContract.AUTHORITY)
             ?: return outcome(SyncOutcome.Code.ERROR)
 
+        val version = appVersion()
         return try {
-            SyncHttp.client(account, appPassword, userAgent(), configureHttp).use { http ->
+            SyncHttp.client(account, appPassword, "Sanctum/$version (Android)", configureHttp).use { http ->
                 val calendars = LocalCalendars(androidAccount, client)
                 val remote = CalendarDiscovery(http).discover(account)
                 var changes = 0
+                var conflicts = 0
                 for (local in calendars.update(remote).filter { it.syncEnabled }) {
                     val calendar = calendars.provider.getCalendar(local.id) ?: continue
+                    val upload = CalendarUpload(
+                        http = http,
+                        calendar = calendar,
+                        url = Url(local.url),
+                        accountName = androidAccount.name,
+                        prodId = "-//Azentrius//Sanctum $version//EN",
+                        copyLabel = copyLabel(),
+                    ).run()
+                    changes += upload.uploaded
+                    conflicts += upload.conflicts
                     changes += CalendarDownload(http, calendar, Url(local.url)).run()
                 }
-                outcome(SyncOutcome.Code.OK, changes)
+                outcome(SyncOutcome.Code.OK, changes, conflicts)
             }
         } catch (e: CancellationException) {
             throw e
@@ -66,24 +80,57 @@ internal class AccountSync(
         }
     }
 
-    private fun outcome(code: SyncOutcome.Code, changes: Int = 0) =
-        SyncOutcome(System.currentTimeMillis(), code, changes)
+    private fun outcome(code: SyncOutcome.Code, changes: Int = 0, conflicts: Int = 0) =
+        SyncOutcome(System.currentTimeMillis(), code, changes, conflicts)
 
-    private fun userAgent(): String {
+    private fun appVersion(): String {
         val version = try {
             context.packageManager.getPackageInfo(context.packageName, 0).versionName
         } catch (_: PackageManager.NameNotFoundException) {
             null
         }
-        return "Sanctum/${version ?: "unknown"} (Android)"
+        return version ?: "unknown"
     }
+
+    /** Goes into the title of a conflict copy, which every calendar app shows; German or English. */
+    private fun copyLabel(): String = if (Locale.getDefault().language == "de") "Kopie" else "copy"
 
     companion object {
         /** One sync per account at a time: periodic runs, "sync now" and switches wait for each other. */
         private val locks = ConcurrentHashMap<String, Mutex>()
 
+        /** Accounts whose sync runs right now in this process, also outside WorkManager. */
+        private val active = ConcurrentHashMap.newKeySet<String>()
+
         suspend fun <T> withAccountLock(accountId: String, block: suspend () -> T): T =
             locks.getOrPut(accountId) { Mutex() }.withLock { block() }
+
+        fun isActive(accountId: String): Boolean = accountId in active
+
+        /**
+         * Syncs an account if its sync is switched on, and stores how it ended. Returns null when
+         * it did not run. Shared by the background job and the sync adapter.
+         *
+         * A rejected app password stays rejected until the user signs in again (which clears the
+         * outcome); trying on every run would only feed the server's brute-force protection, so
+         * only a sync the user asked for tries again.
+         */
+        suspend fun runIfEnabled(context: Context, accountId: String, manual: Boolean): SyncOutcome? {
+            val settings = SyncSettings.forContext(context)
+            if (!settings.isEnabled(accountId)) return null
+            if (!manual && settings.lastOutcome(accountId)?.code == SyncOutcome.Code.AUTH) return null
+            return withAccountLock(accountId) {
+                // Switched off while waiting for the lock
+                if (!settings.isEnabled(accountId)) return@withAccountLock null
+                SyncAccounts(context).find(accountId)?.let { SyncFramework.enableUploads(it) }
+                active += accountId
+                try {
+                    AccountSync(context).run(accountId).also { settings.setLastOutcome(accountId, it) }
+                } finally {
+                    active -= accountId
+                }
+            }
+        }
 
         fun hasCalendarPermission(context: Context): Boolean =
             listOf(Manifest.permission.READ_CALENDAR, Manifest.permission.WRITE_CALENDAR).all {

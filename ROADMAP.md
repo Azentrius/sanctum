@@ -33,7 +33,8 @@ The architecture, the stages and their checks are in [docs/native-sync.md](docs/
   Changes are fetched with WebDAV sync (`sync-collection`), not limited to a time window, by
   WorkManager in the background and on request.
 - **Device to server:** changes from any calendar app, also made offline, are uploaded with
-  `If-Match` and `If-None-Match`. A conflict keeps both versions and asks the user.
+  `If-Match` and `If-None-Match`. A conflict keeps both versions: the server's applies, the
+  device's stays as a copy marked "(copy)", and the user deletes the one not wanted.
 - **The app on the same data:** on Android, Sanctum's own calendar view and editor read and write
   the Android calendar, so there is one copy of the data. The editor gains location, reminders,
   repetition, moving to another calendar and read-only calendars.

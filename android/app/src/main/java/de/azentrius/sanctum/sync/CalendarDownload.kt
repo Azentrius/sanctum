@@ -41,7 +41,8 @@ import at.bitfire.dav4jvm.ktor.Response as DavResponse
  *
  * The new sync token is saved only when everything went through, so an interrupted sync starts
  * over from the old one. Events are deleted on the device only when the server reported them as
- * deleted, or when they are missing from a complete listing.
+ * deleted, or when they are missing from a complete listing. An event changed or deleted on the
+ * device and not uploaded yet is left alone; [CalendarUpload] takes care of it next time.
  */
 internal class CalendarDownload(
     private val http: HttpClient,
@@ -55,10 +56,12 @@ internal class CalendarDownload(
     suspend fun run(): Int {
         val local = localEvents()
         val listing = listing(SyncTokenState.decode(calendar.readSyncState()))
+        val localETags = local.mapValues { it.value.eTag }
+        val pending = local.filterValues { it.pending }.keys
         val plan = if (listing.complete) {
-            EventPlan.full(listing.members.mapValues { it.value.eTag }, local.mapValues { it.value.eTag })
+            EventPlan.full(listing.members.mapValues { it.value.eTag }, localETags, pending)
         } else {
-            EventPlan.changes(listing.members.mapValues { it.value.eTag }, listing.removed, local.mapValues { it.value.eTag })
+            EventPlan.changes(listing.members.mapValues { it.value.eTag }, listing.removed, localETags, pending)
         }
 
         var changes = 0
@@ -193,14 +196,15 @@ internal class CalendarDownload(
     private fun localEvents(): Map<String, LocalEvent> {
         val result = mutableMapOf<String, LocalEvent>()
         calendar.iterateEventRows(
-            arrayOf(Events._ID, Events._SYNC_ID, EventsContract.COLUMN_ETAG),
+            arrayOf(Events._ID, Events._SYNC_ID, EventsContract.COLUMN_ETAG, Events.DIRTY, Events.DELETED),
             "${Events._SYNC_ID} IS NOT NULL AND ${Events.ORIGINAL_ID} IS NULL AND ${Events.ORIGINAL_SYNC_ID} IS NULL",
             null,
         ) { row ->
             val name = row.getAsString(Events._SYNC_ID)
             val id = row.getAsLong(Events._ID)
             if (name != null && id != null) {
-                result[name] = LocalEvent(id, row.getAsString(EventsContract.COLUMN_ETAG))
+                val pending = (row.getAsInteger(Events.DIRTY) ?: 0) != 0 || (row.getAsInteger(Events.DELETED) ?: 0) != 0
+                result[name] = LocalEvent(id, row.getAsString(EventsContract.COLUMN_ETAG), pending)
             }
         }
         return result
@@ -210,7 +214,8 @@ internal class CalendarDownload(
         e.errors.any { it == VALID_SYNC_TOKEN } ||
             (e is HttpException && e.statusCode in INVALID_TOKEN_STATUS)
 
-    private data class LocalEvent(val id: Long, val eTag: String?)
+    /** [pending]: changed or deleted on the device and not uploaded yet. */
+    private data class LocalEvent(val id: Long, val eTag: String?, val pending: Boolean)
 
     private data class Member(val href: Url, val eTag: String?)
 
@@ -238,19 +243,31 @@ internal class CalendarDownload(
     }
 }
 
-/** What a sync of one calendar does: events to fetch and events to remove, by file name. */
+/**
+ * What a sync of one calendar does: events to fetch and events to remove, by file name. Events in
+ * `pending` (changed or deleted on the device, not uploaded yet) are neither fetched nor removed.
+ */
 internal data class EventPlan(val download: List<String>, val delete: List<String>) {
     companion object {
         /** [remote] is everything on the server with its ETag; the rest on the device goes. */
-        fun full(remote: Map<String, String?>, local: Map<String, String?>): EventPlan = EventPlan(
-            download = remote.filter { (name, eTag) -> needsDownload(eTag, name, local) }.keys.sorted(),
-            delete = (local.keys - remote.keys).sorted(),
+        fun full(
+            remote: Map<String, String?>,
+            local: Map<String, String?>,
+            pending: Set<String> = emptySet(),
+        ): EventPlan = EventPlan(
+            download = remote.filter { (name, eTag) -> name !in pending && needsDownload(eTag, name, local) }.keys.sorted(),
+            delete = (local.keys - remote.keys - pending).sorted(),
         )
 
         /** [changed] and [removed] are what changed since the last sync token. */
-        fun changes(changed: Map<String, String?>, removed: Set<String>, local: Map<String, String?>): EventPlan = EventPlan(
-            download = changed.filter { (name, eTag) -> needsDownload(eTag, name, local) }.keys.sorted(),
-            delete = removed.filter { it in local && it !in changed }.sorted(),
+        fun changes(
+            changed: Map<String, String?>,
+            removed: Set<String>,
+            local: Map<String, String?>,
+            pending: Set<String> = emptySet(),
+        ): EventPlan = EventPlan(
+            download = changed.filter { (name, eTag) -> name !in pending && needsDownload(eTag, name, local) }.keys.sorted(),
+            delete = removed.filter { it in local && it !in changed && it !in pending }.sorted(),
         )
 
         private fun needsDownload(eTag: String?, name: String, local: Map<String, String?>): Boolean =

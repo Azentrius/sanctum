@@ -20,6 +20,8 @@ data class LocalCalendar(
     val displayName: String?,
     val color: Int?,
     val syncEnabled: Boolean,
+    /** Whether the user may change its events on the server, and so in calendar apps. */
+    val writable: Boolean,
 )
 
 /**
@@ -27,8 +29,8 @@ data class LocalCalendar(
  * calendar on the server, matched by its URL. A new calendar syncs from the start; the user can
  * switch each off, which keeps it listed but removes its events from the device.
  *
- * Until uploads come (stage 3c) every calendar is read-only on the device, so no change made in
- * another calendar app can get lost.
+ * Calendar apps may change the events of a calendar the user may write on the server; the others
+ * are read-only on the device too.
  */
 internal class LocalCalendars(private val account: Account, client: ContentProviderClient) {
 
@@ -54,6 +56,7 @@ internal class LocalCalendars(private val account: Account, client: ContentProvi
                     displayName = cursor.getString(2),
                     color = if (cursor.isNull(3)) null else cursor.getInt(3),
                     syncEnabled = cursor.getInt(4) != 0,
+                    writable = cursor.getInt(5) >= Calendars.CAL_ACCESS_CONTRIBUTOR,
                 )
             }
         }
@@ -99,6 +102,15 @@ internal class LocalCalendars(private val account: Account, client: ContentProvi
         return true
     }
 
+    /**
+     * Events changed or deleted on the device and not uploaded yet, in one calendar or in all
+     * calendars that sync.
+     */
+    fun pendingChanges(calendarId: Long? = null): Int =
+        list()
+            .filter { if (calendarId == null) it.syncEnabled else it.id == calendarId }
+            .sumOf { provider.getCalendar(it.id)?.countEvents(PENDING, null) ?: 0 }
+
     /** Removes all calendars of the account from the device; nothing on the server. */
     fun deleteAll() {
         for (calendar in list()) {
@@ -111,7 +123,7 @@ internal class LocalCalendars(private val account: Account, client: ContentProvi
         Calendars.NAME to calendar.url,
         Calendars.CALENDAR_DISPLAY_NAME to (calendar.displayName ?: CalendarPlan.nameFromUrl(calendar.url)),
         Calendars.CALENDAR_COLOR to (calendar.color ?: DEFAULT_COLOR),
-        Calendars.CALENDAR_ACCESS_LEVEL to Calendars.CAL_ACCESS_READ,
+        Calendars.CALENDAR_ACCESS_LEVEL to if (calendar.writable) Calendars.CAL_ACCESS_OWNER else Calendars.CAL_ACCESS_READ,
         Calendars.IS_PRIMARY to 0,
         Calendars.ALLOWED_AVAILABILITY to listOf(Events.AVAILABILITY_BUSY, Events.AVAILABILITY_FREE).joinToString(","),
         Calendars.ALLOWED_ATTENDEE_TYPES to listOf(
@@ -134,7 +146,10 @@ internal class LocalCalendars(private val account: Account, client: ContentProvi
             Calendars.CALENDAR_DISPLAY_NAME,
             Calendars.CALENDAR_COLOR,
             Calendars.SYNC_EVENTS,
+            Calendars.CALENDAR_ACCESS_LEVEL,
         )
+
+        const val PENDING = "${Events.DIRTY} OR ${Events.DELETED}"
 
         /** Nextcloud's default calendar colour, for a calendar without one. */
         const val DEFAULT_COLOR = 0xFF0082C9.toInt()

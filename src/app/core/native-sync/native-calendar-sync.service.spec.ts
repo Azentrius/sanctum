@@ -25,7 +25,7 @@ vi.mock('@sentry/capacitor', () => ({
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { TestBed } from '@angular/core/testing';
 
-import { NativeCalendarSyncService } from './native-calendar-sync.service';
+import { NativeCalendarSyncService, isPendingChangesError } from './native-calendar-sync.service';
 import { NativeSyncAccountsService } from './native-sync-accounts.service';
 
 let service: NativeCalendarSyncService;
@@ -111,5 +111,30 @@ describe('NativeCalendarSyncService', () => {
     });
     expect(plugin.setSyncInterval).toHaveBeenCalledWith({ minutes: 240 });
     expect(plugin.syncNow).toHaveBeenCalledWith({ accountId: 'a' });
+  });
+
+  it('drops changes not uploaded yet only when told to', async () => {
+    await service.setAccountSync('a', false, true);
+    await service.setCalendarSync('a', 7, false, true);
+
+    expect(plugin.setAccountSync).toHaveBeenCalledWith({
+      accountId: 'a',
+      enabled: false,
+      discardChanges: true,
+    });
+    expect(plugin.setCalendarSync).toHaveBeenCalledWith({
+      accountId: 'a',
+      calendarId: 7,
+      enabled: false,
+      discardChanges: true,
+    });
+  });
+
+  it('recognises the refusal to switch off with changes not uploaded yet', () => {
+    expect(isPendingChangesError({ code: 'PENDING_CHANGES', message: 'x' })).toBe(true);
+    expect(isPendingChangesError({ code: 'SWITCH_FAILED' })).toBe(false);
+    expect(isPendingChangesError(new Error('PENDING_CHANGES'))).toBe(false);
+    expect(isPendingChangesError(null)).toBe(false);
+    expect(isPendingChangesError(undefined)).toBe(false);
   });
 });

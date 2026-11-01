@@ -24,6 +24,10 @@ private const val CALENDAR = "calendar"
  * The app also switches the calendar sync per account and per calendar, sets the interval and
  * asks for a sync now. Calendar access is a runtime permission ("calendar"), requested through
  * Capacitor's `requestPermissions`.
+ *
+ * Switching a calendar or an account off removes its events from the device. When some of them
+ * were changed on the device and not uploaded yet, the call is rejected with `PENDING_CHANGES`
+ * unless `discardChanges` is true.
  */
 @CapacitorPlugin(
     name = "SanctumSync",
@@ -127,12 +131,13 @@ class SanctumSyncPlugin : Plugin() {
                 item.put("accountId", accountId)
                 item.put("name", androidAccount.name)
                 item.put("enabled", settings.isEnabled(accountId))
-                item.put("running", scheduler.isRunning(accountId))
+                item.put("running", AccountSync.isActive(accountId) || scheduler.isRunning(accountId))
                 settings.lastOutcome(accountId)?.let { outcome ->
                     val last = JSObject()
                     last.put("finishedAt", outcome.finishedAt)
                     last.put("result", outcome.code.wire)
                     last.put("changes", outcome.changes)
+                    last.put("conflicts", outcome.conflicts)
                     item.put("lastSync", last)
                 }
                 val calendars = JSArray()
@@ -144,6 +149,7 @@ class SanctumSyncPlugin : Plugin() {
                             entry.put("name", calendar.displayName ?: CalendarPlan.nameFromUrl(calendar.url))
                             entry.put("color", calendar.color?.let { "#%06X".format(it and 0xFFFFFF) })
                             entry.put("syncEnabled", calendar.syncEnabled)
+                            entry.put("readOnly", !calendar.writable)
                             calendars.put(entry)
                         }
                     }
@@ -179,22 +185,34 @@ class SanctumSyncPlugin : Plugin() {
             call.reject("Calendar access is not granted", "PERMISSION_REQUIRED")
             return
         }
+        val discard = call.getBoolean("discardChanges") ?: false
         try {
             if (enabled) {
                 settings.setEnabled(accountId, true)
                 settings.clearLastOutcome(accountId)
+                SyncFramework.enableUploads(androidAccount)
                 scheduler.schedule(accountId, settings.intervalMinutes)
                 scheduler.syncNow(accountId)
             } else {
-                settings.setEnabled(accountId, false)
-                scheduler.cancel(accountId)
-                if (hasCalendarPermission()) {
-                    runBlocking {
-                        AccountSync.withAccountLock(accountId) {
-                            withCalendars(androidAccount) { it.deleteAll() }
+                val permission = hasCalendarPermission()
+                val switchedOff = runBlocking {
+                    AccountSync.withAccountLock(accountId) {
+                        val pending = permission && !discard &&
+                            (withCalendars(androidAccount) { it.pendingChanges() } ?: 0) > 0
+                        if (!pending) {
+                            // Inside the lock, so a sync waiting for it finds the account switched off
+                            settings.setEnabled(accountId, false)
+                            if (permission) withCalendars(androidAccount) { it.deleteAll() }
                         }
+                        !pending
                     }
                 }
+                if (!switchedOff) {
+                    call.reject("Changes on the device are not uploaded yet", "PENDING_CHANGES")
+                    return
+                }
+                SyncFramework.disableUploads(androidAccount)
+                scheduler.cancel(accountId)
                 settings.clearLastOutcome(accountId)
             }
             call.resolve()
@@ -219,13 +237,24 @@ class SanctumSyncPlugin : Plugin() {
             call.reject("Unknown account or no calendar access", "NOT_FOUND")
             return
         }
+        val discard = call.getBoolean("discardChanges") ?: false
         try {
-            val changed = runBlocking {
+            val result = runBlocking {
                 AccountSync.withAccountLock(accountId) {
-                    withCalendars(androidAccount) { it.setSyncEnabled(calendarId, enabled) } ?: false
+                    withCalendars(androidAccount) { calendars ->
+                        when {
+                            !enabled && !discard && calendars.pendingChanges(calendarId) > 0 -> SwitchResult.PENDING
+                            calendars.setSyncEnabled(calendarId, enabled) -> SwitchResult.DONE
+                            else -> SwitchResult.NOT_FOUND
+                        }
+                    } ?: SwitchResult.NOT_FOUND
                 }
             }
-            if (!changed) {
+            if (result == SwitchResult.PENDING) {
+                call.reject("Changes on the device are not uploaded yet", "PENDING_CHANGES")
+                return
+            }
+            if (result == SwitchResult.NOT_FOUND) {
                 call.reject("Unknown calendar", "NOT_FOUND")
                 return
             }
@@ -275,7 +304,9 @@ class SanctumSyncPlugin : Plugin() {
         }
     }
 
+    private enum class SwitchResult { DONE, PENDING, NOT_FOUND }
+
     private companion object {
-        const val BRIDGE_VERSION = 2
+        const val BRIDGE_VERSION = 3
     }
 }

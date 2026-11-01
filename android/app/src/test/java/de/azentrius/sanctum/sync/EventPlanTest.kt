@@ -52,6 +52,26 @@ class EventPlanTest {
     }
 
     @Test
+    fun `leaves events with changes on the device alone`() {
+        val full = EventPlan.full(
+            remote = mapOf("a.ics" to "\"7\"", "d.ics" to "\"1\""),
+            local = local,
+            pending = setOf("a.ics", "b.ics"),
+        )
+        assertEquals(listOf("d.ics"), full.download)
+        assertEquals(listOf("c.ics"), full.delete)
+
+        val changes = EventPlan.changes(
+            changed = mapOf("a.ics" to "\"7\""),
+            removed = setOf("b.ics", "c.ics"),
+            local = local,
+            pending = setOf("a.ics", "b.ics"),
+        )
+        assertEquals(emptyList<String>(), changes.download)
+        assertEquals(listOf("c.ics"), changes.delete)
+    }
+
+    @Test
     fun `keeps the sync token in the calendar's sync state`() {
         val state = SyncTokenState.encode("http://sabre.io/ns/sync/42")
         assertEquals("http://sabre.io/ns/sync/42", SyncTokenState.decode(state))

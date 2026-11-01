@@ -49,10 +49,11 @@ Nextcloud (CalDAV)  <--  WorkManager job (Kotlin, no WebView)  -->  Android Cale
   token, otherwise a listing of ETags; changed resources are fetched with `calendar-multiget` in
   batches. Local changes (the provider's dirty and deleted rows) are uploaded first, with `If-Match`
   for changes and deletions and `If-None-Match: *` for new events. A 412 answer is a conflict:
-  the server version is fetched, the local version is kept as a copy, and the user decides.
-  A listing that is incomplete or fails never leads to local deletions.
-- **Scheduling:** a periodic WorkManager job per account, an expedited run after a local change
-  (content observer on the provider) and a run on request. One job per account at a time.
+  the event takes the server's version, the local version is uploaded as a copy, and the user
+  decides by deleting one. A listing that is incomplete or fails never leads to local deletions.
+- **Scheduling:** a periodic WorkManager job per account, a run after a local change (through
+  Android's sync framework, also while Sanctum is not running) and a run on request. One sync per
+  account at a time.
 - **Credentials:** the app hands each account's app password to a native store when the user signs
   in or signs in again. It is encrypted with a key in the Android Keystore that does not need the
   user to unlock the app, so the job can run after the first unlock of the device. Nothing reads
@@ -70,8 +71,12 @@ Nextcloud (CalDAV)  <--  WorkManager job (Kotlin, no WebView)  -->  Android Cale
   case (2026-11-01).
 - Events in the Android calendar are readable by apps with calendar access, as with DAVx5; Sanctum
   explains this when the sync is switched on (2026-11-01).
-- Until uploads come in 3c, the synced calendars are read-only on the phone; changes are made in
-  Sanctum or in Nextcloud (2026-11-01).
+- Until uploads came in 3c, the synced calendars were read-only on the phone (2026-11-01). Since
+  3c every calendar the user may write on the server can be changed in any calendar app.
+- A conflict (an event changed on the phone and on the server since the last sync) keeps both
+  versions: the event takes the server's version, and the phone's version is uploaded as a new
+  event with "(copy)" ("(Kopie)" on a German phone) after its title. Nothing is lost, there is no
+  extra dialog, and the user deletes the version not wanted (2026-11-01).
 
 ## Stages
 
@@ -103,8 +108,8 @@ How 3b is built:
   `calendar-home-set`, then the collections there that are calendars and hold events. Calendars
   new on the server are added and sync at once, changed names and colours are taken over,
   calendars gone from the server are removed with their events (`LocalCalendars`).
-- **Read-only until 3c:** every calendar is read-only on the device, so no change made in another
-  calendar app can get lost. A calendar the user switches off keeps its row with `SYNC_EVENTS=0`
+- **Read-only until 3c:** every calendar was read-only on the device, so no change made in another
+  calendar app could get lost. A calendar the user switches off keeps its row with `SYNC_EVENTS=0`
   and loses its events; switching it on again downloads them.
 - **Download** per calendar (`CalendarDownload`): `sync-collection` with the stored token, the
   whole listing when there is no token or the server rejects it, followed up while the server
@@ -117,8 +122,8 @@ How 3b is built:
   with backoff. A rejected app password stops the background sync until the user signs in again,
   so the server's brute-force protection is not fed every 15 minutes.
 - **Sync adapter:** Sanctum is registered as the sync adapter of its accounts' calendars, as DAVx5
-  is, so Android treats them as synced calendars and a calendar app's "refresh" starts a run. It
-  does not react to changes on the device yet (`supportsUploading="false"`).
+  is, so Android treats them as synced calendars and a calendar app's "refresh" starts a run. In 3b
+  it did not react to changes on the device (`supportsUploading="false"`); 3c switched that on.
 - **App:** "Calendar sync" in the settings menu of the Android app: calendar access, the interval,
   per account the switch, the status of the last sync and "Sync now", and per calendar its switch,
   with the notes on privacy, read-only calendars and DAVx5.
@@ -129,10 +134,49 @@ How 3b is built:
 ### 3c The phone to Nextcloud
 
 - Upload of created, changed and deleted events with `If-Match` / `If-None-Match`.
-- Conflicts kept and shown; the user keeps the server version or the own version as a copy.
-- Expedited sync after local changes, also when Sanctum is not running.
+- Conflicts keep both versions: the server's in the event, the phone's as a copy next to it.
+- A sync right after local changes, also when Sanctum is not running.
 - Checks: tests for lost answers, repeated uploads and 412; on the device, events made in another
   calendar app, also offline, arrive in Nextcloud.
+
+How 3c is built:
+
+- **Writable calendars:** a calendar gets owner access in the Calendar Provider when the user may
+  write it on the server (`current-user-privilege-set`), read access otherwise; discovery takes over
+  a change on every sync. The settings mark read-only calendars.
+- **Upload first** (`CalendarUpload`), per calendar and before its download: changed or deleted
+  single dates of a repeating event mark their event as changed (synctools); then deletions go to
+  the server with `If-Match` (or `If-Schedule-Tag-Match`), then new and changed events. A new event
+  gets a UID if it has none, saved before the upload, and its file name comes from the UID (a UUID
+  made from the UID when the UID is not a good file name), so a repeated upload uses the same name.
+  After the upload the event takes the server's ETag and is no longer marked as changed.
+- **When the server has another version** (412, or 404 for a change):
+  - its version is fetched; if it says the same as the device (apart from `DTSTAMP`, `PRODID` and
+    line folding), an earlier upload went through and only its answer was lost: nothing else
+    happens;
+  - otherwise the device's version is uploaded as a new event with "(copy)" after its title, under
+    a UID made from the original UID and the content, so a repeated attempt finds the copy it made
+    before; then the event takes the server's version, and the copy arrives with the download;
+  - a change to an event the server no longer has is uploaded again under the same name;
+  - a deletion of an event the server changed (412) or refuses (403) is dropped: the next download
+    lists the whole calendar, and the event comes back.
+- **The server refuses the data** (another 4xx answer, for example 403 or 409 with a reason): its
+  own version stays, as DAVx5 does it; a new event the server refuses stays on the phone only. A
+  calendar that cannot be written any more gets back the server's version of anything changed.
+- **The download leaves alone** an event changed or deleted on the device and not uploaded yet, so
+  a change made during a sync is uploaded next time instead of being overwritten.
+- **After a change on the phone:** the sync adapter supports uploads, and the Android account syncs
+  the calendar authority automatically, so the sync framework calls Sanctum after a calendar app
+  changed an event, also while Sanctum is not running. The sync runs right in the sync adapter,
+  under the same lock per account as the WorkManager job, and only when one of the account's
+  calendars has a change; a network or server error hands the next try to WorkManager.
+- **Switching off** a calendar or an account removes its events from the phone. While changes are
+  not uploaded yet, the settings ask first, and switching off anyway drops them.
+- **App:** the settings say that calendar apps can change the events, how conflicts end, and how
+  many conflicts the last sync had.
+- **Tests against Nextcloud:** `NextcloudSyncTest` also covers what calendar apps change on the
+  device (see below).
+- **Still open in 3c:** the checks on the device.
 
 ### 3d Sanctum's calendar on the same data
 
@@ -161,7 +205,10 @@ How 3b is built:
 - `NextcloudSyncTest` covers discovery (a task list is left out), the first download with an
   all-day event and a weekly event with a moved instance, a repeated sync without duplicates,
   changes and deletions on the server, a sync token the server rejects, switching a calendar off
-  and on, a calendar removed on the server, and a rejected app password.
+  and on, a calendar removed on the server, and a rejected app password. For the way back it
+  inserts, changes and deletes events as a calendar app does, and checks the upload, an upload
+  whose answer was lost, a conflict with its copy (and no second copy on the next sync), a deletion
+  of an event changed on the server, and a change to an event deleted on the server.
 
 ## Living with DAVx5 during the switch
 

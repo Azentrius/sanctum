@@ -29,6 +29,8 @@ export interface NativeSyncCalendar {
   /** "#RRGGBB", or null when the server has none. */
   color: string | null;
   syncEnabled: boolean;
+  /** The user may only read it on the server, so calendar apps cannot change it either. */
+  readOnly: boolean;
 }
 
 export interface NativeSyncAccountState {
@@ -36,7 +38,13 @@ export interface NativeSyncAccountState {
   name: string;
   enabled: boolean;
   running: boolean;
-  lastSync?: { finishedAt: number; result: NativeSyncResult; changes: number };
+  lastSync?: {
+    finishedAt: number;
+    result: NativeSyncResult;
+    changes: number;
+    /** Events changed here and on the server at once; the device's version became a copy. */
+    conflicts?: number;
+  };
   /** Empty while calendar access is not granted or before the first sync. */
   calendars: NativeSyncCalendar[];
 }
@@ -57,6 +65,9 @@ export interface CalendarPermissionStatus {
  * Bridge to the native sync on Android (`SanctumSyncPlugin.kt`). The app registers each account
  * with its app password and removes it again; no method returns a password. It also switches the
  * calendar sync per account and per calendar, sets the interval and asks for a sync now.
+ *
+ * Switching off removes the events from the device. While some were changed on the device and are
+ * not uploaded yet, it fails with the code `PENDING_CHANGES`, unless `discardChanges` is set.
  */
 export interface SanctumSyncPlugin {
   getAvailability(): Promise<{ available: boolean; version: number }>;
@@ -72,11 +83,16 @@ export interface SanctumSyncPlugin {
   checkPermissions(): Promise<CalendarPermissionStatus>;
   requestPermissions(options?: { permissions: 'calendar'[] }): Promise<CalendarPermissionStatus>;
   getSyncOverview(): Promise<NativeSyncOverview>;
-  setAccountSync(options: { accountId: string; enabled: boolean }): Promise<void>;
+  setAccountSync(options: {
+    accountId: string;
+    enabled: boolean;
+    discardChanges?: boolean;
+  }): Promise<void>;
   setCalendarSync(options: {
     accountId: string;
     calendarId: number;
     enabled: boolean;
+    discardChanges?: boolean;
   }): Promise<void>;
   setSyncInterval(options: { minutes: number }): Promise<void>;
   syncNow(options: { accountId: string }): Promise<void>;

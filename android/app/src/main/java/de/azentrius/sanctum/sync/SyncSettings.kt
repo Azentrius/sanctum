@@ -58,8 +58,11 @@ class SyncSettings(private val store: KeyValueStore) {
     }
 }
 
-/** How a sync of one account ended, and how many events it added, changed or removed. */
-data class SyncOutcome(val finishedAt: Long, val code: Code, val changes: Int = 0) {
+/**
+ * How a sync of one account ended, how many events it added, changed or removed (on the device or
+ * on the server), and how many conflicts left a copy of the device's version.
+ */
+data class SyncOutcome(val finishedAt: Long, val code: Code, val changes: Int = 0, val conflicts: Int = 0) {
 
     enum class Code(val wire: String, val retry: Boolean) {
         OK("ok", false),
@@ -76,18 +79,23 @@ data class SyncOutcome(val finishedAt: Long, val code: Code, val changes: Int = 
         ERROR("error", false),
     }
 
-    fun encode(): String = "$VERSION|$finishedAt|${code.wire}|$changes"
+    fun encode(): String = "$VERSION|$finishedAt|${code.wire}|$changes|$conflicts"
 
     companion object {
-        private const val VERSION = "v1"
+        private const val VERSION = "v2"
 
+        /** Reads what [encode] wrote, and the "v1" of earlier versions, which had no conflicts. */
         fun decode(raw: String): SyncOutcome? {
             val parts = raw.split('|')
-            if (parts.size != 4 || parts[0] != VERSION) return null
+            val conflicts = when {
+                parts.size == 5 && parts[0] == VERSION -> parts[4].toIntOrNull() ?: return null
+                parts.size == 4 && parts[0] == "v1" -> 0
+                else -> return null
+            }
             val finishedAt = parts[1].toLongOrNull() ?: return null
             val code = Code.entries.firstOrNull { it.wire == parts[2] } ?: return null
             val changes = parts[3].toIntOrNull() ?: return null
-            return SyncOutcome(finishedAt, code, changes)
+            return SyncOutcome(finishedAt, code, changes, conflicts)
         }
     }
 }

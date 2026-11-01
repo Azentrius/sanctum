@@ -108,7 +108,8 @@ export const appConfig: ApplicationConfig = {
   providers: [
     provideZoneChangeDetection(),
     importProvidersFrom(
-      IonicModule.forRoot(),
+      // No ripple: pressed surfaces change colour instead (design system, "Zustände").
+      IonicModule.forRoot({ rippleEffect: false }),
       IonicStorageModule.forRoot({
         name: SANCTUM_CACHE_DB_NAME,
         version: 1,

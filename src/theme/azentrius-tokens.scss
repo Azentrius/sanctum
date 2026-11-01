@@ -1,0 +1,112 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
+/*
+ * The colour tokens of the Azentrius design system, themes "Azentrius dunkel" and "Azentrius hell",
+ * with the same names as in its tokens.css. Copied value for value; change them only together with
+ * the design system. Components use these names (var(--bg-page), var(--text), ...); the Ionic
+ * variables in variables.scss are mapped onto them.
+ */
+
+@mixin azentrius-dark {
+  --bg-page: #0a0a0f;
+  --bg-card: #14141c;
+  --bg-floating: #1c1c26;
+  --bg-hover: #1c1c26;
+  --bg-control: #1c1c26;
+  --backdrop: #0a0a0fcc;
+  --line: #26262f;
+  --line-control: #6f6d78;
+  --text: #e8e6e0;
+  --text-subtle: #8d8a82;
+  --text-disabled: #5a5862;
+  --link: #c8a96e;
+  --link-hover: #e3cc9a;
+  --primary: #c8a96e;
+  --primary-hover: #d9be86;
+  --primary-text: #c8a96e;
+  --on-primary: #0a0a0f;
+  --focus: #c8a96e;
+  --status-success: #87bb62;
+  --on-success: #0a0a0f;
+  --status-warning: #ffcc17;
+  --on-warning: #0a0a0f;
+  --status-danger: #f0561d;
+  --on-danger: #0a0a0f;
+  --danger-text: #f89b78;
+  --status-info: #b6a6e9;
+  --on-info: #0a0a0f;
+  --tint-neutral: #26262f;
+  --on-tint-neutral: #e8e6e0;
+  --tint-success: #1e2b17;
+  --on-tint-success: #a8d48a;
+  --tint-warning: #2e2710;
+  --on-tint-warning: #ffd95a;
+  --tint-danger: #351a14;
+  --on-tint-danger: #f8a68a;
+  --tint-info: #241f38;
+  --on-tint-info: #c9bdf0;
+  --signature: #c8a96e;
+  --shadow-sm: 0 1px 6px 0 #00000080;
+  --shadow-md: 0 4px 10px 0 #00000080;
+  --shadow-lg: 0 10px 20px 0 #00000080;
+}
+
+@mixin azentrius-light {
+  --bg-page: #f2f1ee;
+  --bg-card: #ffffff;
+  --bg-floating: #ffffff;
+  --bg-hover: #ebe9e4;
+  --bg-control: #ffffff;
+  --backdrop: #15151566;
+  --line: #e2dfd8;
+  --line-control: #8a867c;
+  --text: #0a0a0f;
+  --text-subtle: #57544d;
+  --text-disabled: #a8a49b;
+  --link: #7d5f22;
+  --link-hover: #5e4718;
+  --primary: #0a0a0f;
+  --primary-hover: #2b2b33;
+  --primary-text: #0a0a0f;
+  --on-primary: #ffffff;
+  --focus: #7d5f22;
+  --status-success: #3d7317;
+  --on-success: #ffffff;
+  --status-warning: #b07e00;
+  --on-warning: #151515;
+  --status-danger: #b1380b;
+  --on-danger: #ffffff;
+  --danger-text: #b1380b;
+  --status-info: #5e40be;
+  --on-info: #ffffff;
+  --tint-neutral: #e7e4dd;
+  --on-tint-neutral: #0a0a0f;
+  --tint-success: #d1f1bb;
+  --on-tint-success: #151515;
+  --tint-warning: #ffe072;
+  --on-tint-warning: #151515;
+  --tint-danger: #fbc5c5;
+  --on-tint-danger: #151515;
+  --tint-info: #d0c5f4;
+  --on-tint-info: #151515;
+  --signature: #7d5f22;
+  --shadow-sm: 0 1px 6px 0 #29292926;
+  --shadow-md: 0 4px 10px 0 #29292926;
+  --shadow-lg: 0 10px 20px 0 #29292926;
+}
+
+/* Fixed brand colours (app icon, start screen); the same in both themes. */
+:root {
+  --brand-gold: #c8a96e;
+  --brand-ink: #0a0a0f;
+  --brand-paper: #e8e6e0;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --radius-small: 6px;
+  --radius-medium: 16px;
+  --radius-large: 24px;
+  --radius-pill: 999px;
+}

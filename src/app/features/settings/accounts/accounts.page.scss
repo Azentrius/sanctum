@@ -14,7 +14,11 @@
 }
 
 .needs-reauth {
-  color: var(--ion-color-danger);
+  color: var(--danger-text);
+}
+
+.sign-in-again {
+  margin: 8px 0 4px;
 }
 
 .hint p {

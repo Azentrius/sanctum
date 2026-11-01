@@ -90,7 +90,8 @@ export class ThemeService {
       // (Android does not populate env(safe-area-inset-top) reliably here).
       await StatusBar.setOverlaysWebView({ overlay: false });
       await StatusBar.setStyle({ style: dark ? Style.Dark : Style.Light });
-      await StatusBar.setBackgroundColor({ color: dark ? '#0F0D22' : '#F6F5FB' });
+      // bg-page of the Azentrius themes, so the status bar sits on the page colour.
+      await StatusBar.setBackgroundColor({ color: dark ? '#0A0A0F' : '#F2F1EE' });
     } catch {
       /* status bar plugin not installed: ignore */
     }

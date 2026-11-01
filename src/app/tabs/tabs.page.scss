@@ -5,10 +5,9 @@
   padding-top: 8px;
 
   .version-label {
-    font-size: 11px;
-    color: var(--ion-color-medium);
-    text-transform: uppercase;
-    letter-spacing: 0.08em;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-subtle);
   }
 
   .version-value {

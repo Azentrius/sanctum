@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-// Build file for the synctools copy from DAVx5 (see README.md). The sources are upstream's,
-// unchanged; this file replaces upstream's Gradle setup, which depends on DAVx5's build logic.
+// Build file for the synctools copy from DAVx5 (see README.md). The sources are upstream's, with
+// one local change; this file replaces upstream's Gradle setup, which depends on DAVx5's build logic.
 
 apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'

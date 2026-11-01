@@ -8,7 +8,6 @@ import net.fortuna.ical4j.model.DefaultTimeZoneRegistryFactory
 import net.fortuna.ical4j.model.TimeZone
 import net.fortuna.ical4j.model.TimeZoneRegistry
 import net.fortuna.ical4j.model.TimeZoneRegistryFactory
-import net.fortuna.ical4j.model.ZoneRulesProviderImpl
 import net.fortuna.ical4j.model.component.Observance
 import java.time.DateTimeException
 import java.time.ZoneId
@@ -106,9 +105,20 @@ class SystemAwareTimeZoneRegistry(
      * the chance of pool exhaustion during time zone registration.
      */
     private fun triggerGcBeforeZoneIdAllocation() {
-        // IDE inspector fails because `java.time.zone.ZoneRulesProvider` is not available, but it's fixed with desugaring. Compile works well
-        val provider = ZoneRulesProviderImpl.getInstance().getOrNull() ?: return
-        if (provider.zoneIdPool.availableZoneIds() == 0) {
+        // Sanctum: through reflection, because `java.time.zone.ZoneRulesProvider` (the supertype of
+        // ZoneRulesProviderImpl) is missing from the classpath of compileSdk 36 with AGP 8 (see README.md).
+        // Upstream: val provider = ZoneRulesProviderImpl.getInstance().getOrNull() ?: return
+        //           if (provider.zoneIdPool.availableZoneIds() == 0) {
+        val availableZoneIds = try {
+            val provider = (Class.forName("net.fortuna.ical4j.model.ZoneRulesProviderImpl")
+                .getMethod("getInstance")
+                .invoke(null) as? java.util.Optional<*>)?.getOrNull() ?: return
+            val pool = provider.javaClass.getMethod("getZoneIdPool").invoke(provider) ?: return
+            pool.javaClass.getMethod("availableZoneIds").invoke(pool) as? Int ?: return
+        } catch (_: ReflectiveOperationException) {
+            return
+        }
+        if (availableZoneIds == 0) {
             // Trigger garbage collection in the hope that old TimeZoneRegistry instances will be freed and in turn
             // ZoneIdPool.cleanup() will be able to reclaim zone IDs that are no longer used.
             Runtime.getRuntime().gc()

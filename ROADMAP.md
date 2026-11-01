@@ -1,9 +1,9 @@
 # Roadmap
 
-Sanctum concentrates on one thing: the Nextcloud calendars of several accounts, in the app and in
-the Android calendar, kept in sync in the background without a separate sync app. Everything else
-from the earlier "super app" scope (tasks, files, Talk, notes, the contacts screens) is hidden until
-this works well.
+Sanctum is meant to bring Nextcloud to Android in one app. It starts with one thing: the calendars
+of several accounts, in the app and in the Android calendar, kept in sync in the background without a
+separate sync app. The other modules (tasks, files, Talk, notes, the contacts screens) are hidden
+until this works well and then come back one by one.
 
 ## 1. Focus on the calendar (done in 0.8.0)
 
@@ -14,11 +14,12 @@ this works well.
   again" and keeps its data; signing in again with the same server and user updates it.
 - The same account cannot be added twice.
 
-## 2. Azentrius design and app icon
+## 2. Azentrius design and app icon (done in 0.9.0)
 
 - The app follows the Azentrius design system: its dark and light colour themes, DM Sans, its
   buttons, lists and dialogs, also in the calendar views.
-- A new app icon (gold on ink, with the dot of the word mark), start screen and notification icon.
+- A new app icon: the shield of the earlier icon, gold on ink, with the dot of the word mark as the
+  light inside; the start screen in ink and the notification icon follow it.
 
 ## 3. Calendar sync with Android
 
@@ -41,7 +42,11 @@ The architecture, the stages and their checks are in [docs/native-sync.md](docs/
 The mapping between iCalendar and the Android calendar builds on DAVx5's open source libraries,
 which are also licensed under the GPL 3.0.
 
+## After that
+
+- The hidden modules come back one by one, each in the same design and with the same accounts.
+
 ## Not planned for now
 
 - iOS builds (iOS syncs CalDAV and CardDAV accounts by itself).
-- Tasks sync and the other Nextcloud apps.
+- A tasks sync with Android task apps.

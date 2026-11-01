@@ -1,19 +1,29 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* ---- Sanctum: selbst-gehostete Fonts ---- */
-@import '@fontsource-variable/inter/index.css';
-@import '@fontsource-variable/sora/index.css';
-@import '@fontsource-variable/jetbrains-mono/index.css';
-
-:root {
-  --ion-font-family: 'Inter Variable', 'Inter', system-ui, -apple-system, sans-serif;
-  --sanctum-font-display: 'Sora Variable', 'Sora', var(--ion-font-family);
-  --sanctum-font-mono: 'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace;
+/* ---- Fonts: DM Sans from the Azentrius design system, self-hosted (OFL, see assets/fonts) ---- */
+@font-face {
+  font-family: 'DM Sans';
+  src: url('assets/fonts/DMSans-VF.woff2') format('woff2');
+  font-weight: 100 1000;
+  font-style: normal;
+  font-display: swap;
 }
 
-body { font-family: var(--ion-font-family); }
+:root {
+  --ion-font-family: 'DM Sans', system-ui, sans-serif;
+  --sanctum-font-display: var(--ion-font-family);
+  --sanctum-font-mono: ui-monospace, 'Cascadia Mono', 'Roboto Mono', monospace;
+}
+
+body {
+  font-family: var(--ion-font-family);
+  font-size: 15px;
+  letter-spacing: 0;
+}
+
 h1, h2, h3, h4, .sanctum-display {
   font-family: var(--sanctum-font-display);
-  letter-spacing: -0.01em;
+  font-weight: 600;
+  letter-spacing: 0;
 }
 
 /*
@@ -43,17 +53,278 @@ h1, h2, h3, h4, .sanctum-display {
 @import "@ionic/angular/css/text-transformation.css";
 @import "@ionic/angular/css/flex-utils.css";
 
-/**
- * Ionic Dark Mode: Sanctum tokens in variables.scss handle light/dark.
- * https://ionicframework.com/docs/theming/dark-mode
- */
+/* ============================================================
+   Azentrius building blocks on Ionic (design system, section "Android"):
+   flat surfaces, pills for everything that can be tapped, 48 dp touch targets,
+   no ripple, no letter spacing, no capitals.
+   ============================================================ */
+
+/* Screen titles: app-title, 22 / 28, 600 */
+ion-title {
+  font-size: 22px;
+  font-weight: 600;
+  letter-spacing: 0;
+}
+
+ion-header.header-md {
+  box-shadow: none;
+}
+
+ion-toolbar {
+  --background: var(--bg-page);
+  --color: var(--text);
+  --border-width: 0;
+}
+
+ion-content {
+  --background: var(--bg-page);
+}
+
+ion-menu {
+  --background: var(--bg-page);
+}
+
+/* Buttons: pills, 48 high, app-control (15 / 20, 500), one primary per screen */
+ion-button {
+  --border-radius: var(--radius-pill);
+  --box-shadow: none;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+ion-content ion-button:not(.button-small) {
+  min-height: 48px;
+  --padding-start: 24px;
+  --padding-end: 24px;
+}
+
+ion-button.button-solid:not(.ion-color) {
+  --background: var(--primary);
+  --background-activated: var(--primary-hover);
+  --background-hover: var(--primary-hover);
+  --background-focused: var(--primary-hover);
+  --color: var(--on-primary);
+}
+
+ion-button.button-outline:not(.ion-color) {
+  --border-color: var(--primary-text);
+  --border-width: 1px;
+  --color: var(--primary-text);
+  --background-activated: var(--bg-hover);
+}
+
+ion-button.button-clear:not(.ion-color) {
+  --color: var(--link);
+  --color-activated: var(--link-hover);
+  --background-activated: transparent;
+}
+
+ion-buttons ion-button.button-clear:not(.ion-color),
+ion-toolbar ion-button.button-clear:not(.ion-color) {
+  --color: var(--text-subtle);
+  --color-activated: var(--text);
+  --background-activated: var(--bg-hover);
+}
+
+/* Disabled: tint-neutral, no border, text-disabled; text buttons stay transparent */
+ion-button.button-disabled:not(.ion-color) {
+  --background: var(--tint-neutral);
+  --border-color: transparent;
+  --color: var(--text-disabled);
+  opacity: 1;
+}
+
+ion-button.button-clear.button-disabled:not(.ion-color) {
+  --background: transparent;
+}
+
+ion-fab-button {
+  --background: var(--primary);
+  --background-activated: var(--primary-hover);
+  --color: var(--on-primary);
+  --box-shadow: var(--shadow-md);
+}
+
+/* Cards and lists: flat, 1 dp line, radius-medium */
+ion-card {
+  --background: var(--bg-card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+  box-shadow: none;
+}
+
+ion-list {
+  background: transparent;
+}
+
+ion-list.list-inset {
+  border: 1px solid var(--line);
+  border-radius: var(--radius-medium);
+}
+
+ion-item {
+  --border-color: var(--line);
+  --background-activated: var(--bg-hover);
+  --background-activated-opacity: 1;
+  --background-focused: var(--bg-hover);
+  --background-focused-opacity: 1;
+  --highlight-color-focused: var(--focus);
+  --color: var(--text);
+}
+
+ion-list-header,
+ion-item-divider {
+  --color: var(--text-subtle);
+  --background: transparent;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+ion-note {
+  color: var(--text-subtle);
+}
+
+/* Words never break in the middle; the layout makes room instead */
+ion-label,
+ion-note,
+ion-button {
+  hyphens: none;
+  overflow-wrap: normal;
+  word-break: normal;
+}
+
+/* Choice chips: pill, 32 high, line-control border */
+ion-chip {
+  border-radius: var(--radius-pill);
+  font-weight: 500;
+  letter-spacing: 0;
+}
+
+/* Tabs (segment): text-subtle, selected primary-text with a 3 dp line, no capitals */
+ion-segment {
+  --background: transparent;
+  border-bottom: 1px solid var(--line);
+  border-radius: 0;
+}
+
+ion-segment-button {
+  --color: var(--text-subtle);
+  --color-checked: var(--primary-text);
+  --indicator-color: var(--primary-text);
+  --indicator-height: 3px;
+  --background-hover: var(--bg-hover);
+  min-height: 48px;
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+/* Switches */
+ion-toggle {
+  --track-background: var(--bg-control);
+  --track-background-checked: var(--primary);
+  --handle-background: var(--line-control);
+  --handle-background-checked: var(--on-primary);
+}
+
+ion-checkbox,
+ion-radio {
+  --checkbox-background-checked: var(--primary);
+  --border-color-checked: var(--primary);
+  --color-checked: var(--primary);
+}
+
+/* Fields: bg-control, 1 dp line-control, radius-small */
+ion-searchbar {
+  --background: var(--bg-control);
+  --border-radius: var(--radius-small);
+  --box-shadow: none;
+}
+
+/* Floating surfaces: bg-floating; dialogs radius-large, menus radius-medium */
+ion-alert {
+  --background: var(--bg-floating);
+
+  .alert-wrapper {
+    border-radius: var(--radius-large);
+    box-shadow: var(--shadow-lg);
+  }
+
+  .alert-title {
+    font-size: 20px;
+    font-weight: 600;
+    color: var(--text);
+  }
+
+  .alert-message {
+    font-size: 15px;
+    color: var(--text);
+  }
+
+  .alert-button {
+    color: var(--link);
+    font-weight: 500;
+    letter-spacing: 0;
+    text-transform: none;
+    border-radius: var(--radius-pill);
+  }
+
+  .alert-button-role-destructive {
+    color: var(--danger-text);
+  }
+}
+
+ion-action-sheet {
+  --background: var(--bg-floating);
+  --color: var(--text);
+  --button-color: var(--text);
+  --button-background-activated: var(--bg-hover);
+}
+
+ion-popover,
+ion-select-popover {
+  --background: var(--bg-floating);
+}
+
+ion-toast {
+  --border-radius: var(--radius-medium);
+  font-size: 15px;
+}
+
+ion-spinner {
+  color: var(--text-subtle);
+}
+
+/* Focus (keyboard, D-pad): 2 dp ring in focus, 2 dp away; none for touch */
+:focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+a {
+  color: var(--link);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0ms !important;
+    animation-duration: 0ms !important;
+  }
+}
 
 .placeholder-icon {
   font-size: 64px;
-  color: var(--ion-color-medium);
+  color: var(--text-subtle);
   margin-top: 40%;
 }
 
 .placeholder-text {
-  color: var(--ion-color-medium);
+  color: var(--text-subtle);
 }

@@ -1,8 +1,9 @@
 # Sanctum
 
-A Nextcloud calendar app for Android: several Nextcloud accounts in one app, a calendar view of all
-of them, and, as the next big step, a sync of their calendars into the Android calendar that runs in
-the background, so that a separate sync app such as DAVx5 is no longer needed.
+Nextcloud on Android in one app, for several accounts at once. Sanctum starts with the calendar: a
+calendar view of all accounts and, as the next big step, a sync of their calendars into the Android
+calendar that runs in the background, so that a separate sync app such as DAVx5 is no longer needed.
+Contacts, files, Talk, tasks and notes follow once the calendar works well.
 
 Sanctum is built with Ionic 8, Angular 21 and Capacitor 8; the Android parts are native. It is in
 its 0.x line: usable, but changing quickly. What comes next is in the [roadmap](ROADMAP.md), what
@@ -18,12 +19,13 @@ changed in the [changelog](CHANGELOG.md).
   Changes are written with `If-Match`, so a newer version on the server is never overwritten.
 - **App lock:** optional biometric unlock after a timeout, screenshot protection, and an encrypted
   local cache (SQLCipher).
-- **Languages:** English and German, or the system language. Light and dark follow the system or a
-  choice in the settings.
+- **Languages:** English and German, or the system language.
+- **Design:** the Azentrius design system, dark and light following the device or a choice in the
+  settings.
 
-The app still contains modules for tasks, files, Talk, notes and contacts from its earlier scope as
-a Nextcloud "super app". They are hidden while the calendar and its sync get the attention; one
-setting in `src/app/core/modules/app-modules.ts` decides which modules the app shows.
+The app already contains first versions of modules for tasks, files, Talk, notes and contacts. They
+are hidden until the calendar and its sync are done; one setting in
+`src/app/core/modules/app-modules.ts` decides which modules the app shows.
 
 ## Building
 

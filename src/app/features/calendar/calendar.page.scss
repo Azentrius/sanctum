@@ -1,11 +1,13 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 :host {
-  --fc-border-color: var(--ion-color-step-100);
-  --fc-today-bg-color: rgba(var(--ion-color-primary-rgb), 0.08);
+  --fc-border-color: var(--line);
+  --fc-today-bg-color: color-mix(in srgb, var(--signature) 12%, transparent);
   --fc-event-border-color: transparent;
-  --fc-page-bg-color: var(--ion-background-color);
-  --fc-neutral-bg-color: var(--ion-color-step-50);
-  --fc-list-event-hover-bg-color: var(--ion-color-step-100);
+  --fc-page-bg-color: var(--bg-page);
+  --fc-neutral-bg-color: var(--bg-card);
+  --fc-neutral-text-color: var(--text-subtle);
+  --fc-list-event-hover-bg-color: var(--bg-hover);
+  --fc-now-indicator-color: var(--status-danger);
 }
 
 .calendar-content {
@@ -38,11 +40,12 @@
   }
 
   ion-chip {
-    border: 1.5px solid;
-    font-size: 0.78rem;
-    height: 28px;
-    --padding-start: 8px;
-    --padding-end: 8px;
+    border: 1px solid;
+    font-size: 13px;
+    height: 32px;
+    margin: 0;
+    --padding-start: 12px;
+    --padding-end: 12px;
   }
 }
 
@@ -110,42 +113,67 @@
   }
 
   ::ng-deep {
+    .fc {
+      font-family: var(--ion-font-family);
+      color: var(--text);
+    }
+
     .fc-toolbar-title {
-      font-size: 1rem !important;
+      font-size: 17px !important;
       font-weight: 600;
     }
 
+    /* Toolbar buttons: pills like every control; pressed and selected as in the design system */
     .fc-button {
-      background: var(--ion-color-step-100) !important;
-      border: none !important;
-      color: var(--ion-text-color) !important;
-      border-radius: 8px !important;
+      min-height: 40px;
+      background: transparent !important;
+      border: 1px solid var(--line-control) !important;
+      color: var(--text) !important;
+      border-radius: var(--radius-pill) !important;
       box-shadow: none !important;
-      font-size: 0.82rem !important;
+      font-size: 15px !important;
+      font-weight: 500;
+      text-transform: none;
     }
 
     .fc-button:hover,
+    .fc-button:active {
+      background: var(--bg-hover) !important;
+    }
+
     .fc-button-active {
-      background: var(--ion-color-primary) !important;
-      color: var(--ion-color-primary-contrast) !important;
+      background: var(--primary) !important;
+      border-color: var(--primary) !important;
+      color: var(--on-primary) !important;
+    }
+
+    .fc-button:focus-visible {
+      outline: 2px solid var(--focus);
+      outline-offset: 2px;
     }
 
     .fc-event {
-      border-radius: 4px !important;
-      font-size: 0.76rem !important;
+      border-radius: var(--radius-small) !important;
+      font-size: 13px !important;
+      font-weight: 500;
       padding: 1px 4px !important;
     }
 
     .fc-daygrid-day-number,
     .fc-col-header-cell-cushion {
       text-decoration: none !important;
-      color: var(--ion-text-color) !important;
-      font-size: 12px;
+      color: var(--text) !important;
+      font-size: 13px;
+    }
+
+    .fc-col-header-cell-cushion {
+      color: var(--text-subtle) !important;
+      font-weight: 500;
     }
 
     .fc-day-today .fc-daygrid-day-number {
-      background: var(--ion-color-primary) !important;
-      color: var(--ion-color-primary-contrast) !important;
+      background: var(--primary) !important;
+      color: var(--on-primary) !important;
       border-radius: 50% !important;
       padding: 2px 6px !important;
     }
@@ -154,16 +182,22 @@
       height: 44px !important;
     }
 
-    .fc-list-event-title {
-      color: var(--ion-text-color) !important;
+    .fc-timegrid-slot-label,
+    .fc-list-event-time {
+      color: var(--text-subtle) !important;
     }
 
-    .fc-list-event-time {
-      color: var(--ion-color-medium) !important;
+    .fc-list-event-title {
+      color: var(--text) !important;
     }
 
     .fc-list-day-cushion {
-      background: var(--ion-color-step-50) !important;
+      background: var(--bg-card) !important;
+      color: var(--text-subtle);
+    }
+
+    .fc-more-link {
+      color: var(--link);
     }
   }
 }

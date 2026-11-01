@@ -33,6 +33,10 @@ const config: CapacitorConfig = {
     PushNotifications: {
       presentationOptions: ['badge', 'sound', 'alert'],
     },
+    LocalNotifications: {
+      // The white silhouette of the app icon; no colour, the system tints it.
+      smallIcon: 'ic_stat_sanctum',
+    },
   },
 };
 

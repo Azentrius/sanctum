@@ -3,14 +3,22 @@ Copyright 2026 Stefan Popp
 Licensed under the GNU General Public License, version 3 or (at your option) any later
 version. See LICENSE.
 
-Not covered by the GNU General Public License: the Sanctum app icon, logo and start screen
-images and the Azentrius name and word mark. These are:
-  assets/*.png
-  src/assets/branding/*.svg, src/assets/icon/favicon.png, src/assets/icons/icon-*.webp
-  android/app/src/main/res/mipmap-*/ic_launcher*, android/app/src/main/res/drawable*/splash.png,
-  android/app/src/main/res/drawable-*/ic_stat_sanctum.png
+Not covered by the GNU General Public License: the Sanctum app icon from the Azentrius design
+system, the earlier Sanctum icon still used by the iOS project, and the Azentrius name and word
+mark. The icon files, taken over unchanged from the design system, are:
+  src/assets/branding/sanctum-mark.svg, src/assets/icon/favicon.svg
+  android/app/src/main/res/drawable/ic_launcher_foreground.xml,
+  android/app/src/main/res/drawable/ic_launcher_monochrome.xml,
+  android/app/src/main/res/drawable/ic_stat_sanctum.xml,
+  android/app/src/main/res/mipmap-anydpi/ic_launcher.xml,
+  android/app/src/main/res/mipmap-anydpi/ic_launcher_round.xml,
+  android/app/src/main/res/values/ic_launcher_background.xml
   ios/App/App/Assets.xcassets/AppIcon.appiconset/*.png, ios/App/App/Assets.xcassets/Splash.imageset/*.png
   Copyright (c) 2026 Stefan Popp. All rights reserved.
+
+DM Sans (src/assets/fonts/DMSans-VF.woff2)
+  Copyright 2014 The DM Sans Project Authors (https://github.com/googlefonts/dm-fonts)
+  SIL Open Font License 1.1, see src/assets/fonts/OFL-DM-Sans.txt
 
 synctools (android/synctools/), from DAVx5 (https://github.com/bitfireAT/davx5-ose)
   Copyright the DAVx5 contributors, see android/synctools/AUTHORS

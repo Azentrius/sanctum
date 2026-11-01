@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Azentrius Designsystem · Sanctum · erzeugt von scripts/app-icon-sanctum.py, nicht von Hand ändern -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp"
+    android:height="24dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+    <path
+        android:fillColor="#FFFFFFFF"
+        android:fillType="evenOdd"
+        android:pathData="M12.000,1.000C16.889,1.000 20.311,4.667 20.311,10.044L20.311,13.711C20.311,18.600 16.644,21.778 12.000,23.000C7.356,21.778 3.689,18.600 3.689,13.711L3.689,10.044C3.689,4.667 7.111,1.000 12.000,1.000ZM12.000,5.156C15.422,5.156 17.378,7.844 17.378,11.022L17.378,13.711C17.378,17.133 14.933,19.333 12.000,20.311C9.067,19.333 6.622,17.133 6.622,13.711L6.622,11.022C6.622,7.844 8.578,5.156 12.000,5.156ZM10.138,12.978A1.862,1.862 0 1 0 13.862,12.978A1.862,1.862 0 1 0 10.138,12.978Z" />
+</vector>

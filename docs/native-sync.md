@@ -117,6 +117,11 @@ How 3b is built:
   in batches of 20 by `calendar-multiget` and are stored with their exceptions through synctools;
   the file name is the event's `_SYNC_ID`, its ETag decides whether it changed. An event that
   cannot be read is skipped, not the sync. The new token is saved last.
+- **What the server calls deleted is asked for again:** Nextcloud sums up the changes since a token
+  with the highest operation per file name, so an event deleted and made again in between is
+  reported as deleted. Before an event goes from the device, the names reported as deleted are
+  fetched once more with `calendar-multiget`; what the server still returns is kept (and stored if
+  it changed), only the rest is deleted.
 - **Jobs:** a periodic WorkManager job per account at the chosen interval, a single run on request,
   both needing a network; one sync per account at a time. Network and server errors are retried
   with backoff. A rejected app password stops the background sync until the user signs in again,
@@ -204,7 +209,8 @@ How 3c is built:
   passes it.
 - `NextcloudSyncTest` covers discovery (a task list is left out), the first download with an
   all-day event and a weekly event with a moved instance, a repeated sync without duplicates,
-  changes and deletions on the server, a sync token the server rejects, switching a calendar off
+  changes and deletions on the server, an event deleted and made again on the server between two
+  syncs, a sync token the server rejects, switching a calendar off
   and on, a calendar removed on the server, and a rejected app password. For the way back it
   inserts, changes and deletes events as a calendar app does, and checks the upload, an upload
   whose answer was lost, a conflict with its copy (and no second copy on the next sync), a deletion

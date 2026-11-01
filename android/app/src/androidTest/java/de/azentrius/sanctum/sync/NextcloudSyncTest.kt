@@ -28,7 +28,8 @@ import java.util.UUID
 /**
  * The native sync against a real Nextcloud (CI job `sync`), on the emulator's Calendar Provider:
  * discovery, the first download, a repeated sync without duplicates, changes and deletions on the
- * server, a sync token the server rejects, switching a calendar off and on, a calendar removed on
+ * server, an event deleted and made again on the server (which Nextcloud reports as deleted), a
+ * sync token the server rejects, switching a calendar off and on, a calendar removed on
  * the server, and a rejected app password; then what calendar apps change on the device: new,
  * changed and deleted events, an upload whose answer was lost, and conflicts both ways.
  */
@@ -100,6 +101,13 @@ class NextcloudSyncTest {
         server.putEvent(calendarUrl + "new.ics", calendar(NEW))
         assertSync(changes = 3)
         val changed = mapOf("new.ics" to "New", "single.ics" to "Single (changed)", "weekly.ics" to "Weekly")
+        assertEquals(changed, mainEvents(calendarId))
+
+        // Deleted and made again on the server between two syncs: Nextcloud reports it as deleted,
+        // and the device keeps it
+        server.delete(calendarUrl + "new.ics")
+        server.putEvent(calendarUrl + "new.ics", calendar(NEW))
+        assertEquals(SyncOutcome.Code.OK, sync().code)
         assertEquals(changed, mainEvents(calendarId))
 
         // A sync token the server rejects: the whole calendar is listed again, nothing doubles

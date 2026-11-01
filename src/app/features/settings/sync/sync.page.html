@@ -1,0 +1,128 @@
+<!-- SPDX-License-Identifier: GPL-3.0-or-later -->
+<ion-header>
+  <ion-toolbar>
+    <ion-buttons slot="start">
+      <ion-back-button
+        icon="close-outline"
+        text=""
+        defaultHref="/tabs/calendar"
+      ></ion-back-button>
+    </ion-buttons>
+    <ion-title>{{ 'NATIVE_SYNC.TITLE' | translate }}</ion-title>
+  </ion-toolbar>
+</ion-header>
+
+<ion-content>
+  <div class="intro ion-padding">
+    <p>{{ 'NATIVE_SYNC.INTRO' | translate }}</p>
+    <p class="note">{{ 'NATIVE_SYNC.PRIVACY' | translate }}</p>
+    <p class="note">{{ 'NATIVE_SYNC.DOWNLOAD_ONLY' | translate }}</p>
+    <p class="note">{{ 'NATIVE_SYNC.DAVX5' | translate }}</p>
+  </div>
+
+  @if (overview(); as state) {
+  @if (!state.permission) {
+  <ion-list>
+    <ion-item lines="none">
+      <ion-label class="ion-text-wrap">{{ 'NATIVE_SYNC.PERMISSION_HINT' | translate }}</ion-label>
+      <ion-button
+        slot="end"
+        [disabled]="busy()"
+        (click)="grantPermission()"
+        [appAriaLabel]="'NATIVE_SYNC.PERMISSION_GRANT' | translate"
+        appAiHint="Calendar sync: allow Sanctum to use the Android calendar"
+      >
+        {{ 'NATIVE_SYNC.PERMISSION_GRANT' | translate }}
+      </ion-button>
+    </ion-item>
+  </ion-list>
+  }
+
+  <ion-list>
+    <ion-item>
+      <ion-select
+        [label]="'NATIVE_SYNC.INTERVAL' | translate"
+        interface="popover"
+        [value]="state.intervalMinutes"
+        [disabled]="busy()"
+        (ionChange)="onIntervalChange($event)"
+        [appAriaLabel]="'NATIVE_SYNC.INTERVAL' | translate"
+        appAiHint="Calendar sync: how often Sanctum syncs in the background"
+      >
+        @for (minutes of intervals; track minutes) {
+        <ion-select-option [value]="minutes">{{ intervalLabelKey(minutes) | translate }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+  </ion-list>
+
+  @for (account of state.accounts; track account.accountId) {
+  <ion-list>
+    <ion-list-header>
+      <ion-label>{{ account.name }}</ion-label>
+    </ion-list-header>
+    <ion-item>
+      <ion-label class="ion-text-wrap">
+        <h2>{{ 'NATIVE_SYNC.ACCOUNT_TOGGLE' | translate }}</h2>
+        @if (account.enabled) {
+        <p>
+          {{ statusKey(account) | translate: { time: lastSyncTime(account), changes: account.lastSync?.changes ?? 0 } }}
+        </p>
+        }
+      </ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="account.enabled"
+        [disabled]="busy()"
+        (ionChange)="onAccountToggle(account, $event)"
+        [appAriaLabel]="'NATIVE_SYNC.ACCOUNT_TOGGLE' | translate"
+        appAiHint="Calendar sync: put this account's calendars into the Android calendar"
+      ></ion-toggle>
+    </ion-item>
+
+    @if (account.enabled) {
+    @for (calendar of account.calendars; track calendar.id) {
+    <ion-item>
+      <span
+        slot="start"
+        class="calendar-dot"
+        [style.background-color]="calendar.color ?? null"
+        aria-hidden="true"
+      ></span>
+      <ion-label class="ion-text-wrap">{{ calendar.name }}</ion-label>
+      <ion-toggle
+        slot="end"
+        [checked]="calendar.syncEnabled"
+        [disabled]="busy()"
+        (ionChange)="onCalendarToggle(account, calendar, $event)"
+        [appAriaLabel]="calendar.name"
+        appAiHint="Calendar sync: sync this calendar or remove it from the device"
+      ></ion-toggle>
+    </ion-item>
+    }
+    <ion-item lines="none">
+      <ion-button
+        slot="end"
+        fill="outline"
+        size="small"
+        [disabled]="busy() || account.running"
+        (click)="syncNow(account)"
+        [appAriaLabel]="'NATIVE_SYNC.SYNC_NOW' | translate"
+        appAiHint="Calendar sync: sync this account now"
+      >
+        {{ 'NATIVE_SYNC.SYNC_NOW' | translate }}
+      </ion-button>
+    </ion-item>
+    }
+  </ion-list>
+  } @empty {
+  <p class="ion-padding">{{ 'NATIVE_SYNC.NO_ACCOUNTS' | translate }}</p>
+  }
+  } @else if (loadFailed()) {
+  <p class="ion-padding">{{ 'NATIVE_SYNC.LOAD_FAILED' | translate }}</p>
+  } @else {
+  <div class="ion-padding ion-text-center">
+    <ion-spinner></ion-spinner>
+  </div>
+  }
+</ion-content>

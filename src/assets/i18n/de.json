@@ -437,5 +437,37 @@
     "KIND_TASK": "Aufgabe",
     "KIND_NOTE": "Notiz",
     "KIND_FILE": "Datei"
+  },
+  "NATIVE_SYNC": {
+    "TITLE": "Kalender-Sync",
+    "INTRO": "Sanctum legt die Kalender deiner Konten im Android-Kalender ab. So zeigen auch andere Kalender-Apps und Widgets deine Termine. Der Sync läuft im Hintergrund, auch wenn Sanctum geschlossen ist.",
+    "PRIVACY": "Jede App mit Kalenderzugriff kann diese Termine lesen, wie bei DAVx5.",
+    "DOWNLOAD_ONLY": "Vorerst lädt Sanctum nur herunter: Andere Apps zeigen die Kalender schreibgeschützt, Änderungen machst du in Sanctum oder in Nextcloud.",
+    "DAVX5": "Synchronisiert DAVx5 diese Kalender schon, schalte sie dort ab. Sonst siehst du jeden Termin doppelt.",
+    "PERMISSION_HINT": "Sanctum braucht Zugriff auf den Android-Kalender, um deine Kalender dort abzulegen.",
+    "PERMISSION_GRANT": "Erlauben",
+    "PERMISSION_DENIED": "Kein Kalenderzugriff. Du kannst ihn in den Android-Einstellungen für Sanctum erlauben.",
+    "INTERVAL": "Synchronisieren",
+    "INTERVAL_15": "Alle 15 Minuten",
+    "INTERVAL_60": "Stündlich",
+    "INTERVAL_240": "Alle 4 Stunden",
+    "INTERVAL_MANUAL": "Nur manuell",
+    "ACCOUNT_TOGGLE": "Kalender synchronisieren",
+    "SYNC_NOW": "Jetzt synchronisieren",
+    "NO_ACCOUNTS": "Noch kein Konto. Füge zuerst in den Einstellungen eines hinzu.",
+    "LOAD_FAILED": "Die Sync-Einstellungen konnten nicht gelesen werden.",
+    "CHANGE_FAILED": "Das hat nicht geklappt. Bitte versuch es noch einmal.",
+    "STATUS": {
+      "RUNNING": "Wird synchronisiert…",
+      "PENDING": "Wartet auf den ersten Sync",
+      "OK": "Zuletzt synchronisiert: {{time}}",
+      "AUTH": "Der Server hat das App-Passwort abgelehnt ({{time}}). Melde dich bei dem Konto neu an.",
+      "CREDENTIALS": "Kein App-Passwort auf diesem Gerät. Melde dich bei dem Konto neu an.",
+      "PERMISSION": "Kein Kalenderzugriff ({{time}}).",
+      "CERTIFICATE": "Das Zertifikat des Servers hat sich geändert ({{time}}). Öffne Sanctum, um es zu prüfen.",
+      "NETWORK": "Keine Verbindung zum Server ({{time}}). Sanctum versucht es erneut.",
+      "SERVER": "Der Server hatte ein Problem ({{time}}). Sanctum versucht es erneut.",
+      "ERROR": "Der Sync ist fehlgeschlagen ({{time}})."
+    }
   }
 }

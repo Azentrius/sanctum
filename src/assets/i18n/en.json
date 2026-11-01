@@ -437,5 +437,37 @@
     "KIND_TASK": "Task",
     "KIND_NOTE": "Note",
     "KIND_FILE": "File"
+  },
+  "NATIVE_SYNC": {
+    "TITLE": "Calendar sync",
+    "INTRO": "Sanctum puts the calendars of your accounts into the Android calendar, so other calendar apps and widgets show your events too. The sync runs in the background, also when Sanctum is closed.",
+    "PRIVACY": "Every app with calendar access can read these events, as with DAVx5.",
+    "DOWNLOAD_ONLY": "For now Sanctum only downloads: other apps show the calendars read-only, and you make changes in Sanctum or in Nextcloud.",
+    "DAVX5": "If DAVx5 already syncs these calendars, switch them off there, or you will see every event twice.",
+    "PERMISSION_HINT": "Sanctum needs access to the Android calendar to put your calendars there.",
+    "PERMISSION_GRANT": "Allow",
+    "PERMISSION_DENIED": "No calendar access. You can allow it in the Android settings for Sanctum.",
+    "INTERVAL": "Sync",
+    "INTERVAL_15": "Every 15 minutes",
+    "INTERVAL_60": "Every hour",
+    "INTERVAL_240": "Every 4 hours",
+    "INTERVAL_MANUAL": "Only manually",
+    "ACCOUNT_TOGGLE": "Sync calendars",
+    "SYNC_NOW": "Sync now",
+    "NO_ACCOUNTS": "No account yet. Add one in the settings first.",
+    "LOAD_FAILED": "The sync settings could not be read.",
+    "CHANGE_FAILED": "That did not work. Please try again.",
+    "STATUS": {
+      "RUNNING": "Syncing…",
+      "PENDING": "Waiting for the first sync",
+      "OK": "Last synced: {{time}}",
+      "AUTH": "The server rejected the app password ({{time}}). Sign in to the account again.",
+      "CREDENTIALS": "No app password on this device. Sign in to the account again.",
+      "PERMISSION": "No calendar access ({{time}}).",
+      "CERTIFICATE": "The server's certificate has changed ({{time}}). Open Sanctum to check it.",
+      "NETWORK": "No connection to the server ({{time}}). Sanctum tries again.",
+      "SERVER": "The server had a problem ({{time}}). Sanctum tries again.",
+      "ERROR": "The sync failed ({{time}})."
+    }
   }
 }

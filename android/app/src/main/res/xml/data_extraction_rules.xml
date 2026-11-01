@@ -10,6 +10,7 @@
         <exclude domain="database" path="sanctum_cacheSQLite.db" />
         <exclude domain="sharedpref" path="sanctum_sync_credentials.xml" />
         <exclude domain="sharedpref" path="sanctum_cert_pins.xml" />
+        <exclude domain="sharedpref" path="sanctum_sync_settings.xml" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="CapacitorStorage.xml" />
@@ -20,5 +21,6 @@
         <exclude domain="database" path="sanctum_cacheSQLite.db" />
         <exclude domain="sharedpref" path="sanctum_sync_credentials.xml" />
         <exclude domain="sharedpref" path="sanctum_cert_pins.xml" />
+        <exclude domain="sharedpref" path="sanctum_sync_settings.xml" />
     </device-transfer>
 </data-extraction-rules>

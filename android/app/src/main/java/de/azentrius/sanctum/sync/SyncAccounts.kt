@@ -44,6 +44,18 @@ class SyncAccounts(context: Context) {
     fun find(accountId: String): Account? =
         all().firstOrNull { manager.getUserData(it, KEY_ACCOUNT_ID) == accountId }
 
+    /** The Sanctum account an Android account stands for, or null when its data is incomplete. */
+    fun read(account: Account): SanctumAccount? =
+        try {
+            SanctumAccount(
+                accountId = manager.getUserData(account, KEY_ACCOUNT_ID).orEmpty(),
+                serverUrl = manager.getUserData(account, KEY_SERVER_URL).orEmpty(),
+                username = manager.getUserData(account, KEY_USERNAME).orEmpty(),
+            )
+        } catch (_: IllegalArgumentException) {
+            null
+        }
+
     /** All Android accounts of Sanctum with the Sanctum id they belong to (null for a stray one). */
     fun list(): List<Pair<Account, String?>> = all().map { it to manager.getUserData(it, KEY_ACCOUNT_ID) }
 

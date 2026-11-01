@@ -70,6 +70,8 @@ Nextcloud (CalDAV)  <--  WorkManager job (Kotlin, no WebView)  -->  Android Cale
   case (2026-11-01).
 - Events in the Android calendar are readable by apps with calendar access, as with DAVx5; Sanctum
   explains this when the sync is switched on (2026-11-01).
+- Until uploads come in 3c, the synced calendars are read-only on the phone; changes are made in
+  Sanctum or in Nextcloud (2026-11-01).
 
 ## Stages
 
@@ -94,6 +96,34 @@ CI, and the listed checks on a real device.
 - WorkManager scheduling and a sync status per account (last success, error).
 - Checks: instrumented tests on an emulator against a Nextcloud container in CI; on the device, the
   calendars of two accounts appear in the phone's calendar app and follow changes made in Nextcloud.
+
+How 3b is built:
+
+- **Discovery** on every sync: `current-user-principal` from `remote.php/dav/`, its
+  `calendar-home-set`, then the collections there that are calendars and hold events. Calendars
+  new on the server are added and sync at once, changed names and colours are taken over,
+  calendars gone from the server are removed with their events (`LocalCalendars`).
+- **Read-only until 3c:** every calendar is read-only on the device, so no change made in another
+  calendar app can get lost. A calendar the user switches off keeps its row with `SYNC_EVENTS=0`
+  and loses its events; switching it on again downloads them.
+- **Download** per calendar (`CalendarDownload`): `sync-collection` with the stored token, the
+  whole listing when there is no token or the server rejects it, followed up while the server
+  truncates (507); a `PROPFIND` listing for a server without `sync-collection`. Changed events come
+  in batches of 20 by `calendar-multiget` and are stored with their exceptions through synctools;
+  the file name is the event's `_SYNC_ID`, its ETag decides whether it changed. An event that
+  cannot be read is skipped, not the sync. The new token is saved last.
+- **Jobs:** a periodic WorkManager job per account at the chosen interval, a single run on request,
+  both needing a network; one sync per account at a time. Network and server errors are retried
+  with backoff. A rejected app password stops the background sync until the user signs in again,
+  so the server's brute-force protection is not fed every 15 minutes.
+- **Sync adapter:** Sanctum is registered as the sync adapter of its accounts' calendars, as DAVx5
+  is, so Android treats them as synced calendars and a calendar app's "refresh" starts a run. It
+  does not react to changes on the device yet (`supportsUploading="false"`).
+- **App:** "Calendar sync" in the settings menu of the Android app: calendar access, the interval,
+  per account the switch, the status of the last sync and "Sync now", and per calendar its switch,
+  with the notes on privacy, read-only calendars and DAVx5.
+- **Still open in 3b:** the instrumented tests against a Nextcloud container in CI and the checks
+  on the device.
 
 ### 3c The phone to Nextcloud
 

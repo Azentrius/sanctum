@@ -8,6 +8,7 @@ import { Subject, filter, takeUntil } from 'rxjs';
 
 import { environment } from '../../environments/environment';
 import { BiometricService } from '../core/auth/biometric.service';
+import { NativeSyncAccountsService } from '../core/native-sync/native-sync-accounts.service';
 import { PrivacyScreenService } from '../core/privacy/privacy-screen.service';
 import { AriaLabelDirective } from '../shared/directives/aria-label.directive';
 
@@ -25,6 +26,9 @@ export class TabsPage implements OnInit, OnDestroy {
   appLockEnabled = false;
   preventScreenshotsEnabled = true;
   securityStatusLoading = true;
+
+  /** The calendar sync with the Android calendar exists only in the Android app. */
+  readonly nativeSyncAvailable = inject(NativeSyncAccountsService).isAvailable();
 
   private readonly menu = inject(MenuController);
   private readonly biometric = inject(BiometricService);

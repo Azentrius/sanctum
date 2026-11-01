@@ -1,13 +1,14 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 import { CommonModule } from '@angular/common';
 import { Component, OnDestroy, inject, signal } from '@angular/core';
-import { IonicModule, ToastController } from '@ionic/angular';
+import { AlertController, IonicModule, ToastController } from '@ionic/angular';
 import { TranslatePipe, TranslateService } from '@ngx-translate/core';
 
 import { TranslationService } from '../../../core/i18n/translation.service';
 import {
   NativeCalendarSyncService,
   SYNC_INTERVALS,
+  isPendingChangesError,
 } from '../../../core/native-sync/native-calendar-sync.service';
 import {
   NativeSyncAccountState,
@@ -15,7 +16,7 @@ import {
   NativeSyncOverview,
 } from '../../../core/native-sync/sanctum-sync.plugin';
 import { AriaLabelDirective } from '../../../shared/directives/aria-label.directive';
-import { intervalLabelKey, syncStatusKey } from './sync.helpers';
+import { conflictCount, intervalLabelKey, syncStatusKey } from './sync.helpers';
 
 /** How long the page keeps refreshing after the user started something, and how often. */
 const FOLLOW_UP_MS = 30_000;
@@ -34,12 +35,14 @@ const REFRESH_MS = 2_000;
 })
 export class SyncPage implements OnDestroy {
   private readonly sync = inject(NativeCalendarSyncService);
+  private readonly alertCtrl = inject(AlertController);
   private readonly toastCtrl = inject(ToastController);
   private readonly translate = inject(TranslateService);
   private readonly translation = inject(TranslationService);
 
   readonly intervals = SYNC_INTERVALS;
   readonly intervalLabelKey = intervalLabelKey;
+  readonly conflictCount = conflictCount;
   readonly overview = signal<NativeSyncOverview | null>(null);
   readonly loadFailed = signal(false);
   readonly busy = signal(false);
@@ -100,8 +103,14 @@ export class SyncPage implements OnDestroy {
     }
     await this.run(
       async () => {
-        if (!(await this.sync.setAccountSync(account.accountId, enabled))) {
+        let permitted = true;
+        const switched = await this.allowingDiscard(async (discardChanges) => {
+          permitted = await this.sync.setAccountSync(account.accountId, enabled, discardChanges);
+        });
+        if (!switched || !permitted) {
           this.setToggle(event, !enabled);
+        }
+        if (!permitted) {
           await this.showToast('NATIVE_SYNC.PERMISSION_DENIED');
         }
       },
@@ -119,13 +128,57 @@ export class SyncPage implements OnDestroy {
       return;
     }
     await this.run(
-      () => this.sync.setCalendarSync(account.accountId, calendar.id, enabled),
+      async () => {
+        const switched = await this.allowingDiscard((discardChanges) =>
+          this.sync.setCalendarSync(account.accountId, calendar.id, enabled, discardChanges),
+        );
+        if (!switched) {
+          this.setToggle(event, !enabled);
+        }
+      },
       () => this.setToggle(event, !enabled),
     );
   }
 
   async syncNow(account: NativeSyncAccountState): Promise<void> {
     await this.run(() => this.sync.syncNow(account.accountId));
+  }
+
+  /**
+   * Runs a switch. When the native side refuses to switch off because changes on this phone are
+   * not uploaded yet, asks whether to drop them and, if so, switches off anyway. False when the
+   * user keeps them.
+   */
+  private async allowingDiscard(
+    change: (discardChanges: boolean) => Promise<unknown>,
+  ): Promise<boolean> {
+    try {
+      await change(false);
+      return true;
+    } catch (error) {
+      if (!isPendingChangesError(error)) {
+        throw error;
+      }
+    }
+    if (!(await this.confirmDiscard())) {
+      return false;
+    }
+    await change(true);
+    return true;
+  }
+
+  private async confirmDiscard(): Promise<boolean> {
+    const alert = await this.alertCtrl.create({
+      header: this.translate.instant('NATIVE_SYNC.PENDING_TITLE'),
+      message: this.translate.instant('NATIVE_SYNC.PENDING_BODY'),
+      buttons: [
+        { text: this.translate.instant('APP.CANCEL'), role: 'cancel' },
+        { text: this.translate.instant('NATIVE_SYNC.PENDING_DISCARD'), role: 'destructive' },
+      ],
+    });
+    await alert.present();
+    const { role } = await alert.onDidDismiss();
+    return role === 'destructive';
   }
 
   /** Runs a change, then reloads and follows the sync for a while; reverts the control on failure. */

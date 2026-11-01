@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<!-- Download only for now: changes on the device do not trigger a sync (supportsUploading) -->
+<!-- supportsUploading: a change made in a calendar app starts a sync (see SyncFramework.kt) -->
 <sync-adapter xmlns:android="http://schemas.android.com/apk/res/android"
     android:accountType="@string/account_type"
     android:contentAuthority="com.android.calendar"
     android:allowParallelSyncs="true"
     android:isAlwaysSyncable="true"
-    android:supportsUploading="false"
+    android:supportsUploading="true"
     android:userVisible="false" />

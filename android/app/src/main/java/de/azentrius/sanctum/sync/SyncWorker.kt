@@ -15,22 +15,10 @@ class SyncWorker(context: Context, params: WorkerParameters) : CoroutineWorker(c
 
     override suspend fun doWork(): Result {
         val accountId = inputData.getString(KEY_ACCOUNT_ID) ?: return Result.failure()
-        val settings = SyncSettings.forContext(applicationContext)
-        if (!settings.isEnabled(accountId)) return Result.success()
-
-        // A rejected app password stays rejected until the user signs in again (which clears the
-        // outcome); trying every 15 minutes would only feed the server's brute-force protection.
         val manual = inputData.getBoolean(KEY_MANUAL, false)
-        if (!manual && settings.lastOutcome(accountId)?.code == SyncOutcome.Code.AUTH) return Result.success()
-
         val outcome = withContext(Dispatchers.IO) {
-            AccountSync.withAccountLock(accountId) {
-                // Switched off while waiting for the lock
-                if (settings.isEnabled(accountId)) AccountSync(applicationContext).run(accountId) else null
-            }
+            AccountSync.runIfEnabled(applicationContext, accountId, manual)
         } ?: return Result.success()
-        settings.setLastOutcome(accountId, outcome)
-
         return if (outcome.code.retry && runAttemptCount < MAX_RETRIES) Result.retry() else Result.success()
     }
 

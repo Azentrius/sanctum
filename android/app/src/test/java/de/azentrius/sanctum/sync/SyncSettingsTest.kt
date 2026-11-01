@@ -75,18 +75,26 @@ class SyncSettingsTest {
     @Test
     fun `outcomes survive encoding`() {
         for (code in SyncOutcome.Code.entries) {
-            val outcome = SyncOutcome(42, code, 7)
+            val outcome = SyncOutcome(42, code, 7, 2)
             assertEquals(outcome, SyncOutcome.decode(outcome.encode()))
         }
+    }
+
+    @Test
+    fun `reads outcomes of earlier versions, without conflicts`() {
+        assertEquals(SyncOutcome(1, SyncOutcome.Code.OK, 3, 0), SyncOutcome.decode("v1|1|ok|3"))
     }
 
     @Test
     fun `reads unknown or broken outcomes as none`() {
         assertNull(SyncOutcome.decode(""))
         assertNull(SyncOutcome.decode("v2|1|ok|0"))
+        assertNull(SyncOutcome.decode("v2|1|ok|0|x"))
+        assertNull(SyncOutcome.decode("v3|1|ok|0|0"))
         assertNull(SyncOutcome.decode("v1|x|ok|0"))
         assertNull(SyncOutcome.decode("v1|1|maybe|0"))
         assertNull(SyncOutcome.decode("v1|1|ok"))
+        assertNull(SyncOutcome.decode("v1|1|ok|0|0"))
     }
 
     @Test

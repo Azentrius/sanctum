@@ -38,7 +38,7 @@
                 android:resource="@xml/account_authenticator" />
         </service>
 
-        <!-- Sync adapter of the accounts' calendars; it hands each request to the background sync -->
+        <!-- Sync adapter of the accounts' calendars: syncs after changes in calendar apps and on their refresh -->
         <service
             android:name=".sync.CalendarSyncAdapterService"
             android:exported="true">

@@ -8,6 +8,7 @@ import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.ByteArrayInputStream
+import java.net.URLDecoder
 import java.security.KeyStore
 import java.security.cert.CertificateFactory
 import java.security.cert.X509Certificate
@@ -77,6 +78,35 @@ internal class TestServer(
 
     /** Deletes a calendar or an event; one that is already gone is fine. */
     fun delete(resourceUrl: String) = send("DELETE", resourceUrl, null, null, 204, 404)
+
+    /** The iCalendar of an event, or null when the server has none. */
+    fun getEvent(eventUrl: String): String? {
+        val request = Request.Builder().url(eventUrl).get().build()
+        http.newCall(request).execute().use { response ->
+            if (response.code == 404) return null
+            check(response.isSuccessful) { "GET ${request.url.encodedPath}: HTTP ${response.code}" }
+            return response.body.string()
+        }
+    }
+
+    /** The file names of the events in a calendar. */
+    fun eventNames(calendarUrl: String): Set<String> {
+        val body = """<?xml version="1.0" encoding="utf-8"?><d:propfind xmlns:d="DAV:"><d:prop><d:getetag/></d:prop></d:propfind>"""
+        val request = Request.Builder()
+            .url(calendarUrl)
+            .header("Depth", "1")
+            .method("PROPFIND", body.toRequestBody("application/xml; charset=utf-8".toMediaType()))
+            .build()
+        val xml = http.newCall(request).execute().use { response ->
+            check(response.code == 207) { "PROPFIND ${request.url.encodedPath}: HTTP ${response.code}" }
+            response.body.string()
+        }
+        return Regex("<(?:[A-Za-z]+:)?href>([^<]+)</(?:[A-Za-z]+:)?href>").findAll(xml)
+            .map { it.groupValues[1] }
+            .filter { !it.endsWith("/") }
+            .map { URLDecoder.decode(it.substringAfterLast('/'), "UTF-8") }
+            .toSet()
+    }
 
     private fun send(method: String, target: String, body: String?, contentType: String?, vararg expected: Int) {
         val request = Request.Builder()

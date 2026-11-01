@@ -58,6 +58,10 @@ class NextcloudSyncTest {
 
     @Test
     fun followsTheServer(): Unit = runBlocking {
+        // The user's own calendars first (Nextcloud puts an example event and a birthday there), so
+        // the counts below are this test's calendar only
+        assertEquals(SyncOutcome.Code.OK, sync().code)
+
         server.makeCalendar(calendarUrl, "Sanctum CI", "VEVENT")
         server.makeCalendar(tasksUrl, "Sanctum CI tasks", "VTODO")
         server.putEvent(calendarUrl + "single.ics", calendar(SINGLE))

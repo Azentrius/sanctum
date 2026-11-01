@@ -8,6 +8,7 @@ import android.database.Cursor
 import android.provider.CalendarContract.Calendars
 import android.provider.CalendarContract.Events
 import android.provider.CalendarContract.Instances
+import android.provider.CalendarContract.Reminders
 import androidx.core.content.contentValuesOf
 import at.bitfire.synctools.storage.calendar.AndroidCalendarProvider
 
@@ -42,6 +43,10 @@ data class DeviceInstance(
     val seriesId: Long?,
     /** When the series planned this date; differs from [begin] for a moved date. */
     val originalBegin: Long,
+    /** The RFC 5545 rule of the series; read for one date only ([DeviceEvents.instance]). */
+    val rrule: String? = null,
+    /** Pop-up reminders in minutes before the start; read for one date only. */
+    val reminders: List<Int> = emptyList(),
 )
 
 /** What Sanctum's editor sets on an event. All-day events: see [DeviceInstance.allDay]. */
@@ -52,6 +57,11 @@ data class EventFields(
     val end: Long,
     val allDay: Boolean,
     val timeZone: String,
+    val location: String? = null,
+    /** The rule of a repeating event, null for a single one; one date of a series keeps its series' rule. */
+    val rrule: String? = null,
+    /** Pop-up reminders in minutes before the start (negative: after it); null leaves them as they are. */
+    val reminders: List<Int>? = null,
 )
 
 /** For a date of a repeating event: change only this date, or the whole series. */
@@ -105,34 +115,53 @@ internal class DeviceEvents(context: Context) {
         return queryInstances(from, to, "${Instances.CALENDAR_ID} IN (${calendarIds.joinToString(",")})", null)
     }
 
-    /** One date: the event [eventId] beginning at [begin]. */
-    fun instance(eventId: Long, begin: Long): DeviceInstance? =
-        queryInstances(begin, begin + 1, "${Instances.EVENT_ID}=? AND ${Instances.BEGIN}=?", arrayOf("$eventId", "$begin"))
+    /** One date, the event [eventId] beginning at [begin], with the rule of its series and its reminders. */
+    fun instance(eventId: Long, begin: Long): DeviceInstance? {
+        val instance = queryInstances(begin, begin + 1, "${Instances.EVENT_ID}=? AND ${Instances.BEGIN}=?", arrayOf("$eventId", "$begin"))
             .firstOrNull { calendarOf(it.calendarId) != null }
+            ?: return null
+        // A changed date has no reminders of its own until it is saved; it shows those of its series
+        val reminders = reminders(eventId).ifEmpty { instance.seriesId?.let { reminders(it) }.orEmpty() }
+        return instance.copy(rrule = instance.seriesId?.let { seriesRule(it) }, reminders = reminders)
+    }
 
     /** Adds an event; returns its row. */
     fun create(calendarId: Long, fields: EventFields): Long {
         requireWritable(calendarId)
-        val values = timeValues(fields, recurring = false).apply {
+        val values = timeValues(fields, recurring = fields.rrule != null).apply {
+            putAll(textValues(fields))
             put(Events.CALENDAR_ID, calendarId)
-            put(Events.TITLE, fields.title)
-            put(Events.DESCRIPTION, fields.description)
+            put(Events.RRULE, fields.rrule)
         }
         val uri = resolver.insert(Events.CONTENT_URI, values) ?: error("The event could not be added")
-        return ContentUris.parseId(uri)
+        val eventId = ContentUris.parseId(uri)
+        setReminders(eventId, fields.reminders)
+        return eventId
     }
 
     fun update(instance: DeviceInstance, fields: EventFields, scope: EventScope) {
         requireWritable(instance.calendarId)
-        val text = contentValuesOf(Events.TITLE to fields.title, Events.DESCRIPTION to fields.description)
         val seriesId = instance.seriesId
         when {
-            // A single event, or a date of a series changed before: its own row
-            seriesId == null || (instance.eventId != seriesId && scope == EventScope.SINGLE) ->
-                updateRow(instance.eventId, timeValues(fields, recurring = false).apply { putAll(text) })
-            scope == EventScope.SINGLE ->
-                addException(seriesId, instance.originalBegin, exceptionValues(seriesId, fields, text))
-            else -> updateSeries(seriesId, instance, fields, text)
+            // A single event: its own row; a rule makes it a series
+            seriesId == null -> {
+                val values = timeValues(fields, recurring = fields.rrule != null).apply {
+                    putAll(textValues(fields))
+                    put(Events.RRULE, fields.rrule)
+                }
+                updateRow(instance.eventId, values)
+                setReminders(instance.eventId, fields.reminders)
+            }
+            // A date of a series changed before: the exception's own row
+            instance.eventId != seriesId && scope == EventScope.SINGLE -> {
+                updateRow(instance.eventId, timeValues(fields, recurring = false).apply { putAll(textValues(fields)) })
+                setReminders(instance.eventId, fields.reminders)
+            }
+            scope == EventScope.SINGLE -> {
+                val exceptionId = addException(seriesId, instance.originalBegin, exceptionValues(seriesId, fields))
+                setReminders(exceptionId, fields.reminders)
+            }
+            else -> updateSeries(seriesId, instance, fields)
         }
     }
 
@@ -148,51 +177,117 @@ internal class DeviceEvents(context: Context) {
         }
     }
 
-    /** The whole series: text as given; a changed time moves every date by as much as this one. */
-    private fun updateSeries(seriesId: Long, instance: DeviceInstance, fields: EventFields, text: ContentValues) {
-        val values = ContentValues(text)
+    /**
+     * Moves the event, a whole series with its changed dates, into another calendar: there as a new
+     * event with the editor's values, here deleted. On the server that is a new event in the other
+     * calendar and a deletion in this one. Returns the new row.
+     */
+    fun move(instance: DeviceInstance, targetCalendarId: Long, fields: EventFields): Long {
+        requireWritable(instance.calendarId)
+        requireWritable(targetCalendarId)
+        val seriesId = instance.seriesId
+        if (seriesId == null) {
+            val created = create(targetCalendarId, fields.copy(reminders = fields.reminders ?: reminders(instance.eventId)))
+            deleteRow(instance.eventId)
+            return created
+        }
+
+        val series = seriesRow(seriesId)
+        val begin = EventTimes.movedSeriesStart(series.start, instance.begin, fields.begin, fields.allDay)
+        val shift = begin - series.start
+        val moved = fields.copy(begin = begin, end = begin + (fields.end - fields.begin))
+        if (fields.rrule == null) {
+            // No longer repeating: a single event on the series' first date, as when editing it here
+            val created = create(targetCalendarId, moved.copy(reminders = fields.reminders ?: reminders(seriesId)))
+            deleteRow(seriesId)
+            return created
+        }
+        val values = timeValues(moved, recurring = true).apply {
+            putAll(textValues(fields))
+            put(Events.CALENDAR_ID, targetCalendarId)
+            put(Events.RRULE, fields.rrule)
+            // Dates the series leaves out or adds stay right while it keeps its rule and times
+            if (shift == 0L && fields.rrule == series.rrule) {
+                put(Events.EXDATE, series.exdate)
+                put(Events.RDATE, series.rdate)
+            }
+        }
+        val uri = resolver.insert(Events.CONTENT_URI, values) ?: error("The event could not be moved")
+        val movedId = ContentUris.parseId(uri)
+        setReminders(movedId, fields.reminders ?: reminders(seriesId))
+
+        for (exception in exceptionRows(seriesId)) {
+            val exceptionValues = contentValuesOf(
+                Events.DTSTART to exception.start + shift,
+                Events.DURATION to EventTimes.duration(exception.start, exception.end, exception.allDay),
+                Events.ALL_DAY to if (exception.allDay) 1 else 0,
+                Events.EVENT_TIMEZONE to exception.timeZone,
+                Events.TITLE to exception.title,
+                Events.DESCRIPTION to exception.description,
+                Events.EVENT_LOCATION to exception.location,
+            ).apply {
+                if (exception.status == null) putNull(Events.STATUS) else put(Events.STATUS, exception.status)
+            }
+            val movedException = addException(movedId, exception.originalBegin + shift, exceptionValues)
+            setReminders(movedException, reminders(exception.id))
+        }
+        deleteRow(seriesId)
+        return movedId
+    }
+
+    /**
+     * The whole series: text and rule as given; a changed time moves every date by as much as this
+     * one. Without a rule it becomes a single event on its first date, and its changed dates go.
+     */
+    private fun updateSeries(seriesId: Long, instance: DeviceInstance, fields: EventFields) {
+        val values = textValues(fields)
+        val series = seriesRow(seriesId)
         val timeChanged = fields.begin != instance.begin || fields.end != instance.end || fields.allDay != instance.allDay
-        if (timeChanged) {
-            val seriesStart = resolver.query(
-                ContentUris.withAppendedId(Events.CONTENT_URI, seriesId),
-                arrayOf(Events.DTSTART),
-                null,
-                null,
-                null,
-            )?.use { if (it.moveToFirst()) it.getLong(0) else null } ?: error("The series is gone")
-            val begin = EventTimes.movedSeriesStart(seriesStart, instance.begin, fields.begin, fields.allDay)
-            values.putAll(timeValues(fields.copy(begin = begin, end = begin + (fields.end - fields.begin)), recurring = true))
+        val begin = EventTimes.movedSeriesStart(series.start, instance.begin, fields.begin, fields.allDay)
+        val moved = fields.copy(begin = begin, end = begin + (fields.end - fields.begin))
+        if (fields.rrule == null) {
+            values.putAll(timeValues(moved, recurring = false))
+            values.putNull(Events.RRULE)
+            values.putNull(Events.RDATE)
+            values.putNull(Events.EXDATE)
+            for (exception in exceptionRows(seriesId)) deleteRow(exception.id)
+        } else {
+            if (timeChanged) values.putAll(timeValues(moved, recurring = true))
+            values.put(Events.RRULE, fields.rrule)
         }
         updateRow(seriesId, values)
+        setReminders(seriesId, fields.reminders)
     }
+
+    private fun textValues(fields: EventFields): ContentValues = contentValuesOf(
+        Events.TITLE to fields.title,
+        Events.DESCRIPTION to fields.description,
+        Events.EVENT_LOCATION to fields.location,
+    )
 
     /**
      * A changed date as a new exception. The provider takes only some columns there: a start and a
      * duration, from which it computes the end, but no end. Without a status it would mark the
      * date as tentative, so it gets the status of its series.
      */
-    private fun exceptionValues(seriesId: Long, fields: EventFields, text: ContentValues): ContentValues =
+    private fun exceptionValues(seriesId: Long, fields: EventFields): ContentValues =
         contentValuesOf(
             Events.DTSTART to fields.begin,
             Events.DURATION to EventTimes.duration(fields.begin, fields.end, fields.allDay),
             Events.ALL_DAY to if (fields.allDay) 1 else 0,
             Events.EVENT_TIMEZONE to if (fields.allDay) EventTimes.ALL_DAY_ZONE else fields.timeZone,
         ).apply {
-            putAll(text)
-            val status = resolver.query(
-                ContentUris.withAppendedId(Events.CONTENT_URI, seriesId),
-                arrayOf(Events.STATUS),
-                null,
-                null,
-                null,
-            )?.use { if (it.moveToFirst() && !it.isNull(0)) it.getInt(0) else null }
+            putAll(textValues(fields))
+            val status = seriesRow(seriesId).status
             if (status == null) putNull(Events.STATUS) else put(Events.STATUS, status)
         }
 
-    private fun addException(seriesId: Long, originalBegin: Long, values: ContentValues) {
+    /** Adds an exception to a series; returns its row. */
+    private fun addException(seriesId: Long, originalBegin: Long, values: ContentValues): Long {
         values.put(Events.ORIGINAL_INSTANCE_TIME, originalBegin)
-        resolver.insert(ContentUris.withAppendedId(Events.CONTENT_EXCEPTION_URI, seriesId), values)
+        val uri = resolver.insert(ContentUris.withAppendedId(Events.CONTENT_EXCEPTION_URI, seriesId), values)
             ?: error("The date could not be changed")
+        return ContentUris.parseId(uri)
     }
 
     private fun updateRow(eventId: Long, values: ContentValues) {
@@ -202,6 +297,101 @@ internal class DeviceEvents(context: Context) {
 
     private fun deleteRow(eventId: Long) {
         resolver.delete(ContentUris.withAppendedId(Events.CONTENT_URI, eventId), null, null)
+    }
+
+    /** Pop-up reminders of an event row, in minutes before its start. */
+    private fun reminders(eventId: Long): List<Int> {
+        val result = mutableListOf<Int>()
+        resolver.query(
+            Reminders.CONTENT_URI,
+            arrayOf(Reminders.MINUTES),
+            "${Reminders.EVENT_ID}=? AND ${Reminders.METHOD} IN ($POPUP_METHODS)",
+            arrayOf("$eventId"),
+            "${Reminders.MINUTES} ASC",
+        )?.use { cursor ->
+            while (cursor.moveToNext()) result += cursor.getInt(0)
+        }
+        return result.distinct()
+    }
+
+    /** Replaces the pop-up reminders of an event row; other kinds (e-mail) stay. */
+    private fun setReminders(eventId: Long, minutes: List<Int>?) {
+        if (minutes == null || minutes.distinct().sorted() == reminders(eventId)) return
+        resolver.delete(
+            Reminders.CONTENT_URI,
+            "${Reminders.EVENT_ID}=? AND ${Reminders.METHOD} IN ($POPUP_METHODS)",
+            arrayOf("$eventId"),
+        )
+        for (minute in minutes.distinct()) {
+            resolver.insert(
+                Reminders.CONTENT_URI,
+                contentValuesOf(
+                    Reminders.EVENT_ID to eventId,
+                    Reminders.MINUTES to minute,
+                    Reminders.METHOD to Reminders.METHOD_ALERT,
+                ),
+            )
+        }
+    }
+
+    private fun seriesRule(seriesId: Long): String? = seriesRow(seriesId).rrule
+
+    private fun seriesRow(seriesId: Long): SeriesRow =
+        resolver.query(
+            ContentUris.withAppendedId(Events.CONTENT_URI, seriesId),
+            arrayOf(Events.DTSTART, Events.RRULE, Events.RDATE, Events.EXDATE, Events.STATUS),
+            null,
+            null,
+            null,
+        )?.use { cursor ->
+            if (!cursor.moveToFirst()) return@use null
+            SeriesRow(
+                start = cursor.getLong(0),
+                rrule = cursor.getString(1),
+                rdate = cursor.getString(2),
+                exdate = cursor.getString(3),
+                status = cursor.intOrNull(4),
+            )
+        } ?: error("The series is gone")
+
+    /** The changed and cancelled dates of a series. */
+    private fun exceptionRows(seriesId: Long): List<ExceptionRow> {
+        val result = mutableListOf<ExceptionRow>()
+        resolver.query(
+            Events.CONTENT_URI,
+            arrayOf(
+                Events._ID,
+                Events.ORIGINAL_INSTANCE_TIME,
+                Events.DTSTART,
+                Events.DTEND,
+                Events.ALL_DAY,
+                Events.EVENT_TIMEZONE,
+                Events.TITLE,
+                Events.DESCRIPTION,
+                Events.EVENT_LOCATION,
+                Events.STATUS,
+            ),
+            "${Events.ORIGINAL_ID}=? AND ${Events.DELETED}=0",
+            arrayOf("$seriesId"),
+            null,
+        )?.use { cursor ->
+            while (cursor.moveToNext()) {
+                val start = cursor.getLong(2)
+                result += ExceptionRow(
+                    id = cursor.getLong(0),
+                    originalBegin = cursor.getLong(1),
+                    start = start,
+                    end = cursor.longOrNull(3) ?: start,
+                    allDay = cursor.getInt(4) != 0,
+                    timeZone = cursor.getString(5),
+                    title = cursor.getString(6),
+                    description = cursor.getString(7),
+                    location = cursor.getString(8),
+                    status = cursor.intOrNull(9),
+                )
+            }
+        }
+        return result
     }
 
     /**
@@ -265,7 +455,25 @@ internal class DeviceEvents(context: Context) {
 
     private fun Cursor.longOrNull(index: Int): Long? = if (isNull(index)) null else getLong(index)
 
+    private class SeriesRow(val start: Long, val rrule: String?, val rdate: String?, val exdate: String?, val status: Int?)
+
+    private class ExceptionRow(
+        val id: Long,
+        val originalBegin: Long,
+        val start: Long,
+        val end: Long,
+        val allDay: Boolean,
+        val timeZone: String?,
+        val title: String?,
+        val description: String?,
+        val location: String?,
+        val status: Int?,
+    )
+
     private companion object {
+        /** Reminders that pop up on the device: "default" (as the calendar app likes) and "alert". */
+        const val POPUP_METHODS = "${Reminders.METHOD_DEFAULT},${Reminders.METHOD_ALERT}"
+
         val CALENDAR_PROJECTION = arrayOf(
             Calendars._ID,
             Calendars.ACCOUNT_NAME,

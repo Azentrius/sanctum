@@ -18,6 +18,7 @@ export class CaldavCalendarSource implements CalendarSource {
   private readonly syncService = inject(SyncService);
 
   readonly writesNeedNetwork = true;
+  readonly editsDetails = false;
 
   readonly calendars = this.calendarService.allCalendars$.pipe(
     map((calendars) =>
@@ -62,14 +63,20 @@ export class CaldavCalendarSource implements CalendarSource {
   }
 
   createEvent(calendar: AccountCalendar, draft: EventDraft): Promise<void> {
-    return this.eventService.createEvent(calendar.accountId, calendar.id, { ...draft });
+    return this.eventService.createEvent(calendar.accountId, calendar.id, basicFields(draft));
   }
 
   updateEvent(event: CalendarEvent, draft: EventDraft, options: EventWriteOptions): Promise<void> {
-    return this.eventService.updateEvent({ ...event, ...draft }, options);
+    return this.eventService.updateEvent({ ...event, ...basicFields(draft) }, options);
   }
 
   deleteEvent(event: CalendarEvent, options: EventWriteOptions): Promise<void> {
     return this.eventService.deleteEvent(event, options);
   }
+}
+
+/** The fields this path writes; it keeps location, repetition and reminders as they are. */
+function basicFields(draft: EventDraft): Partial<CalendarEvent> {
+  const { title, description, start, end, allDay, tzid } = draft;
+  return { title, description, start, end, allDay, tzid };
 }

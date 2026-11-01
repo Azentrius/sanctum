@@ -31,6 +31,19 @@
       ></ion-input>
     </ion-item>
 
+    @if (details) {
+    <ion-item lines="full">
+      <ion-label position="stacked">{{ 'EVENT.FIELD_LOCATION' | translate }}</ion-label>
+      <ion-input
+        formControlName="location"
+        [placeholder]="'EVENT.FIELD_LOCATION_PLACEHOLDER' | translate"
+        [appAriaLabel]="'EVENT.FIELD_LOCATION' | translate"
+        appAiHint="Event location field (optional)"
+        autocomplete="off"
+      ></ion-input>
+    </ion-item>
+    }
+
     <ion-item lines="full">
       <ion-label>{{ 'EVENT.FIELD_ALL_DAY' | translate }}</ion-label>
       <ion-toggle formControlName="allDay" slot="end"></ion-toggle>
@@ -70,6 +83,102 @@
     </ion-item>
     }
 
+    @if (details) {
+    <ion-item lines="full">
+      <ion-select
+        [label]="'EVENT.FIELD_REPEAT' | translate"
+        formControlName="repeat"
+        interface="action-sheet"
+        appAiHint="How the event repeats"
+      >
+        @for (choice of repeatChoices; track choice) {
+        <ion-select-option [value]="choice">{{ repeatLabel(choice) | translate }}</ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+
+    @if (form.value.repeat !== 'none' && form.value.repeat !== 'custom') {
+    <ion-item lines="full">
+      <ion-select
+        [label]="'EVENT.FIELD_REPEAT_END' | translate"
+        formControlName="repeatEnd"
+        interface="popover"
+        appAiHint="When the repetition ends"
+      >
+        <ion-select-option value="never">{{ 'EVENT.REPEAT_END_NEVER' | translate }}</ion-select-option>
+        <ion-select-option value="until">{{ 'EVENT.REPEAT_END_UNTIL' | translate }}</ion-select-option>
+        <ion-select-option value="count">{{ 'EVENT.REPEAT_END_COUNT' | translate }}</ion-select-option>
+      </ion-select>
+    </ion-item>
+
+    @if (form.value.repeatEnd === 'until') {
+    <ion-item lines="full">
+      <ion-label>{{ 'EVENT.FIELD_REPEAT_UNTIL' | translate }}</ion-label>
+      <ion-datetime-button datetime="dtUntil" slot="end"></ion-datetime-button>
+      <ion-modal [keepContentsMounted]="true">
+        <ng-template>
+          <ion-datetime
+            id="dtUntil"
+            formControlName="repeatUntil"
+            presentation="date"
+            [locale]="datetimeLocale"
+            [firstDayOfWeek]="1"
+          ></ion-datetime>
+        </ng-template>
+      </ion-modal>
+    </ion-item>
+    }
+
+    @if (form.value.repeatEnd === 'count') {
+    <ion-item lines="full">
+      <ion-input
+        type="number"
+        inputmode="numeric"
+        min="1"
+        max="999"
+        formControlName="repeatCount"
+        [label]="'EVENT.FIELD_REPEAT_COUNT' | translate"
+        [appAriaLabel]="'EVENT.FIELD_REPEAT_COUNT' | translate"
+        appAiHint="How many times the event takes place"
+      ></ion-input>
+    </ion-item>
+    }
+    }
+
+    @for (minutes of reminders; track minutes) {
+    <ion-item lines="full">
+      <ion-label>{{ reminderLabel(minutes).key | translate: reminderLabel(minutes).params }}</ion-label>
+      <ion-button
+        slot="end"
+        fill="clear"
+        (click)="removeReminder(minutes)"
+        [appAriaLabel]="'EVENT.REMINDER_REMOVE' | translate"
+        appAiHint="Remove this reminder"
+      >
+        <ion-icon slot="icon-only" name="close-outline"></ion-icon>
+      </ion-button>
+    </ion-item>
+    }
+
+    @if (addableReminders().length > 0) {
+    <ion-item lines="full">
+      <ion-select
+        [label]="'EVENT.REMINDER_ADD' | translate"
+        [value]="null"
+        interface="action-sheet"
+        (ionChange)="addReminder($event)"
+        appAiHint="Add a reminder before the event"
+      >
+        @for (minutes of addableReminders(); track minutes) {
+        <ion-select-option [value]="minutes">
+          {{ reminderLabel(minutes).key | translate: reminderLabel(minutes).params }}
+        </ion-select-option>
+        }
+      </ion-select>
+    </ion-item>
+    }
+    }
+
     <ion-item lines="full">
       <div
         slot="start"
@@ -86,6 +195,10 @@
         }
       </ion-select>
     </ion-item>
+
+    @if (changesWholeSeries) {
+    <p class="series-note">{{ 'EVENT.SERIES_WHOLE_NOTE' | translate }}</p>
+    }
 
     <ion-item lines="none">
       <ion-label position="stacked">{{ 'EVENT.FIELD_NOTE' | translate }}</ion-label>

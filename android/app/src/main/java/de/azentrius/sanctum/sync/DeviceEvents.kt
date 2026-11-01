@@ -131,7 +131,7 @@ internal class DeviceEvents(context: Context) {
             seriesId == null || (instance.eventId != seriesId && scope == EventScope.SINGLE) ->
                 updateRow(instance.eventId, timeValues(fields, recurring = false).apply { putAll(text) })
             scope == EventScope.SINGLE ->
-                addException(seriesId, instance.originalBegin, timeValues(fields, recurring = false).apply { putAll(text) })
+                addException(seriesId, instance.originalBegin, exceptionValues(seriesId, fields, text))
             else -> updateSeries(seriesId, instance, fields, text)
         }
     }
@@ -165,6 +165,29 @@ internal class DeviceEvents(context: Context) {
         }
         updateRow(seriesId, values)
     }
+
+    /**
+     * A changed date as a new exception. The provider takes only some columns there: a start and a
+     * duration, from which it computes the end, but no end. Without a status it would mark the
+     * date as tentative, so it gets the status of its series.
+     */
+    private fun exceptionValues(seriesId: Long, fields: EventFields, text: ContentValues): ContentValues =
+        contentValuesOf(
+            Events.DTSTART to fields.begin,
+            Events.DURATION to EventTimes.duration(fields.begin, fields.end, fields.allDay),
+            Events.ALL_DAY to if (fields.allDay) 1 else 0,
+            Events.EVENT_TIMEZONE to if (fields.allDay) EventTimes.ALL_DAY_ZONE else fields.timeZone,
+        ).apply {
+            putAll(text)
+            val status = resolver.query(
+                ContentUris.withAppendedId(Events.CONTENT_URI, seriesId),
+                arrayOf(Events.STATUS),
+                null,
+                null,
+                null,
+            )?.use { if (it.moveToFirst() && !it.isNull(0)) it.getInt(0) else null }
+            if (status == null) putNull(Events.STATUS) else put(Events.STATUS, status)
+        }
 
     private fun addException(seriesId: Long, originalBegin: Long, values: ContentValues) {
         values.put(Events.ORIGINAL_INSTANCE_TIME, originalBegin)

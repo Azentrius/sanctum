@@ -220,7 +220,10 @@ as it was (3d-1), then the new fields of the editor (3d-2).
   automatic sync switched off, the background job does). A single event is changed in its row.
   For a date of a repeating event, "this event" adds an exception through
   `CONTENT_EXCEPTION_URI` (or changes the exception there is), and deleting it adds a cancelled
-  exception, which goes to the server as an `EXDATE`; "all events" changes the series, and a new
+  exception, which goes to the server as an `EXDATE`. The provider takes only some columns for a
+  new exception: a start and a duration, from which it computes the end, never an end; and
+  without a status it marks the date as tentative, so the exception gets the status of its
+  series; "all events" changes the series, and a new
   time moves every date by as much as the edited one; deleting removes the series. Writes to
   calendars that are read-only on the server are refused (`READ_ONLY`), and the editor offers only
   writable calendars for new events and does not move events between calendars (that comes with

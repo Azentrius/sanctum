@@ -3,7 +3,8 @@
 
 buildscript {
     // One Kotlin version for the app and the plugins that read it (Capacitor's filesystem plugin).
-    ext.kotlin_version = '2.2.20'
+    // 2.4: dav4jvm 5 is built with it; Kotlin 2.4.21 supports AGP 8.5.2 to 9.3.1.
+    ext.kotlin_version = '2.4.21'
 
     repositories {
         google()
@@ -25,6 +26,13 @@ allprojects {
     repositories {
         google()
         mavenCentral()
+        // dav4jvm is published only on JitPack; nothing else may come from there.
+        maven {
+            url = 'https://jitpack.io'
+            content {
+                includeGroup 'com.github.bitfireAT'
+            }
+        }
     }
 }
 

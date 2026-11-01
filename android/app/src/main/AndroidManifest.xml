@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8" ?>
 <!-- SPDX-License-Identifier: GPL-3.0-or-later -->
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <application
         android:allowBackup="true"
         android:fullBackupContent="@xml/backup_rules"
@@ -53,4 +54,21 @@
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+
+    <!-- Native calendar sync: the Android calendar, and sync settings of Sanctum's accounts -->
+    <uses-permission android:name="android.permission.READ_CALENDAR" />
+    <uses-permission android:name="android.permission.WRITE_CALENDAR" />
+    <uses-permission android:name="android.permission.READ_SYNC_SETTINGS" />
+    <uses-permission android:name="android.permission.WRITE_SYNC_SETTINGS" />
+
+    <!-- synctools also declares these for contacts and task apps; Sanctum does not sync them (yet) -->
+    <uses-permission android:name="android.permission.READ_CONTACTS" tools:node="remove" />
+    <uses-permission android:name="android.permission.WRITE_CONTACTS" tools:node="remove" />
+    <uses-permission android:name="android.permission.MANAGE_CONTACTS" tools:node="remove" />
+    <uses-permission android:name="org.dmfs.permission.READ_TASKS" tools:node="remove" />
+    <uses-permission android:name="org.dmfs.permission.WRITE_TASKS" tools:node="remove" />
+    <uses-permission android:name="org.tasks.permission.READ_TASKS" tools:node="remove" />
+    <uses-permission android:name="org.tasks.permission.WRITE_TASKS" tools:node="remove" />
+    <uses-permission android:name="at.techbee.jtx.permission.READ" tools:node="remove" />
+    <uses-permission android:name="at.techbee.jtx.permission.WRITE" tools:node="remove" />
 </manifest>

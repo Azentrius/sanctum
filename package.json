@@ -97,7 +97,7 @@
     "eslint": "^9.28.0",
     "jsdom": "^29.1.1",
     "typescript": "~5.9.3",
-    "vitest": "^4.1.12"
+    "vitest": "^5.0.5"
   },
   "overrides": {
     "tar": "^7.5.16",

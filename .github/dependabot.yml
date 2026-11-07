@@ -1,6 +1,10 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 # Dependabot version updates for the npm packages, the Android build and the GitHub Actions in .github/workflows.
 # The groups take minor and patch updates; each major update comes as its own pull request.
+# Dependabot moves each package to its own newest release and installs with --force, so it cannot
+# move packages that only work together. Those are held back below and moved by hand in one pull
+# request. The ignore rules name update types, so they hold back version updates only: security
+# updates still come.
 version: 2
 updates:
   - package-ecosystem: "npm"
@@ -17,6 +21,41 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # A new Angular major is a migration with ng update, in one pull request: all Angular packages
+      # with the CLI, the builder and the CDK, angular-eslint, the Ionic Angular toolkit, the
+      # TypeScript release Angular supports, and vitest with its coverage provider once @angular/build
+      # accepts their new major. Angular accepts only some TypeScript minors, so these wait as well.
+      - dependency-name: "@angular/*"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@angular-eslint/*"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@ionic/angular-toolkit"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "typescript"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+      - dependency-name: "vitest"
+        update-types:
+          - "version-update:semver-major"
+      - dependency-name: "@vitest/*"
+        update-types:
+          - "version-update:semver-major"
+      # FullCalendar 7 replaces the plugin packages with a single package; that is a migration of its own.
+      - dependency-name: "@fullcalendar/*"
+        update-types:
+          - "version-update:semver-major"
+      # Sentry Capacitor installs only next to the exact Sentry Angular release it was built with.
+      # Dependabot cannot pick that release, so both move together by hand.
+      - dependency-name: "@sentry/*"
+        update-types:
+          - "version-update:semver-major"
+          - "version-update:semver-minor"
+          - "version-update:semver-patch"
   - package-ecosystem: "gradle"
     directory: "/android"
     schedule:
